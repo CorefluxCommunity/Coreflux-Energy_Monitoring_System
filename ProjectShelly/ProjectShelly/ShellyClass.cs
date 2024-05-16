@@ -54,7 +54,8 @@ public class DeviceDetails
 
 public class Device
 {
-	public string Topic { get; set; } = "";
+	public string Topic { get; set;} = "";
+	public string Name {get; set;} = "";
 	public bool Reference = false;
 	public bool	TopicConnection = false;
 	public List<DeviceDetails>? Messages;
@@ -99,12 +100,15 @@ public class Room
 
 public class Office
 {
-    public string Name { get; set; }
+    public string Name { get; set; } = "";
+	public string Topic { get; set; } = "";
+	public double TotalEnergy;
     public List<Room> Rooms { get; set; } = new List<Room>();
 }
 
 public class Company
 {
-    public string Name { get; set; }
+    public string Name { get; set; } = "";
+	public double TotalEnergy;
     public List<Office> Offices { get; set; } = new List<Office>();
 }
