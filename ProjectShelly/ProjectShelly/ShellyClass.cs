@@ -58,15 +58,14 @@ public class Device
 	public string Name {get; set;} = "";
 	public bool Reference = false;
 	public bool	TopicConnection = false;
-	public List<DeviceDetails>? Messages;
+	public List<DeviceDetails>? Messages = new List<DeviceDetails>();
 
 	public double LastEnergyVal;
 	public double TotalEnergyConsumed;
 
-	public Device()
+	/* public Device()
 	{
-		Messages = new List<DeviceDetails>();
-	}
+	} */
 
 	public bool CheckAndSubscribe(ILogger<Worker> log)
 	{
@@ -109,6 +108,8 @@ public class Office
 public class Company
 {
     public string Name { get; set; } = "";
+
+	public string Topic{get; set;} = "";
 	public double TotalEnergy;
     public List<Office> Offices { get; set; } = new List<Office>();
 }

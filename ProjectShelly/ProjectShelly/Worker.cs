@@ -1,5 +1,7 @@
 using Coreflux.API.Networking.MQTT;
 namespace App.WorkerService;
+
+using System.Linq.Expressions;
 using Newtonsoft.Json;
 using Tomlyn;
 using Tomlyn.Model;
@@ -9,7 +11,7 @@ public sealed class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     public bool FirstEntry { get; set; }
-    public Company MyCompany{get; set;} = new Company{Name = "Coreflux"}; // create Company Obj
+    public Company MyCompany{get; set;} = new Company(); // create Company Obj
 
     public Worker(ILogger<Worker> logger)
     {
@@ -23,6 +25,33 @@ public sealed class Worker : BackgroundService
     private void LoadConfiguration(string filepath)
     {
         var toml = File.ReadAllText(filepath);
+        var document = Toml.Parse(toml);
+
+        if (document.HasErrors)
+        {
+            foreach (var error in document.Diagnostics)
+            {
+                _logger.LogInformation($"{error}");
+            }
+            return;
+        }
+
+        var company = document.ToModel()["company"] as TomlTable;
+        if (company != null)
+        {
+            string topic = company["topic"].ToString();
+            var topicSegments = topic.Split('/');
+            if (topicSegments.Length != 2)
+            {
+                _logger.LogWarning($"Invalid topic format: {topic}");
+                return;
+            }
+            string companyName = topicSegments[0];
+            MyCompany.Name = companyName;
+            MyCompany.Topic = topic;
+        }
+
+        /* var toml = File.ReadAllText(filepath);
         var document = Toml.Parse(toml);
 
         if (document.HasErrors)
@@ -83,66 +112,128 @@ public sealed class Worker : BackgroundService
             {
                 _logger.LogWarning($"Device with name {deviceName} already exists in room {roomName}");
             }
-        }
+        } */
     }
 
     private void onMqttNewPayload(MQTTNewPayload message)
     {
-        var msg = JsonConvert.DeserializeObject<DeviceDetails>(message.payload);
-
-        foreach (var office in MyCompany.Offices)
+        try
         {
-            foreach (var room in office.Rooms)
+            if (ValidateDeviceDetails(message.topic))
             {
-                var MyDevice = room.Devices.Find(p => p.Topic.Equals(message.topic));//TODO perceber melhor como funciona LINQ
-                if (MyDevice != null)
-                {
-                    MyDevice.Messages.Add(msg);
-                    if (!MyDevice.Reference)
-                    {
-                        MyDevice.LastEnergyVal = msg.Aenergy.Total;
-                        MyDevice.Reference = true;
-                        Console.WriteLine($"\nREFERENCE VALUE\n----------TOPIC {MyDevice.Topic}\nLast Energy Value: {MyDevice.LastEnergyVal}\n");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"\n NEW ENERGY VALUES from the topic {MyDevice.Topic} at {DateTimeOffset.Now}");
-                        Console.WriteLine($"Last Energy Value: {MyDevice.LastEnergyVal:F3}");
-                        Console.WriteLine($"Actual Energy Value: {msg.Aenergy.Total:F3}");
-                        double tempEnergyConsumed = 0;
-                        tempEnergyConsumed = Math.Round(msg.Aenergy.Total - MyDevice.LastEnergyVal, 3);
-                        MyDevice.TotalEnergyConsumed += tempEnergyConsumed;
-                        MyDevice.LastEnergyVal = msg.Aenergy.Total;
-                        Console.WriteLine($"TOTAL ENERGY CONSUMED: {MyDevice.TotalEnergyConsumed:F3}\n");
-
-                        room.TotalEnergy += tempEnergyConsumed;
-                        room.TotalEnergy = Math.Round(room.TotalEnergy, 3);
-
-                        office.TotalEnergy += tempEnergyConsumed;
-                        office.TotalEnergy = Math.Round(office.TotalEnergy, 3);
-
-                        MyCompany.TotalEnergy += tempEnergyConsumed;
-                        MyCompany.TotalEnergy = Math.Round(MyCompany.TotalEnergy, 3);
-                    }
-                }
+                var msg = JsonConvert.DeserializeObject<DeviceDetails>(message.payload);
+                if (msg != null)
+                    ProcessDeviceDetails(msg, message.topic);
             }
-
+            else
+                _logger.LogWarning($"Invalid payload or strucute: {message.payload}");
+        }
+        catch (JsonSerializationException ex)
+        {
+            _logger.LogError($"Error deserializing payload: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Unhandled exception: {ex.Message}");
         }
     }
 
+    public bool ValidateDeviceDetails(string topic)
+    {
+        var topicSegments = topic.Split('/');
+
+        if (topicSegments.Length == 6 && topicSegments[5] == "switch:0")
+            return true;
+        return false;
+    }
+
+    private void ProcessDeviceDetails(DeviceDetails msg, string topic)
+    {
+        var topicSegments = topic.Split('/');
+
+        if (topicSegments.Length < 6)
+        {
+            _logger.LogWarning($"Invalid topic format: {topic}");
+            return;
+        }
+
+        string officeName = topicSegments[1];
+        string roomName = topicSegments[2];
+        string deviceName = topicSegments[3];
+
+        _logger.LogInformation($"Processing topic: {topic} - Office: {officeName}, Room: {roomName}, Device: {deviceName}");
+
+        var office = MyCompany.Offices.FirstOrDefault(o => o.Name == officeName);
+        if (office == null)
+        {
+            office = new Office { Name = officeName };
+            MyCompany.Offices.Add(office);
+            _logger.LogInformation($"Created new office: {officeName}");
+        }
+
+        var room = office.Rooms.FirstOrDefault(r => r.Name == roomName);
+        if (room == null)
+        {
+            room = new Room { Name = roomName };
+            office.Rooms.Add(room);
+            _logger.LogInformation($"Created new room: {roomName}");
+        }
+
+        var device = room.Devices.FirstOrDefault(d => d.Name == deviceName);
+        if (device == null)
+        {
+            device = new Device
+            {
+                Topic = topic,
+                Name = deviceName
+            };
+            room.Devices.Add(device);
+            _logger.LogInformation($"Created new device: {deviceName}");
+        }
+
+        // Ensure device.Messages is not null
+        if (device.Messages == null)
+        {
+            device.Messages = new List<DeviceDetails>();
+        }
+        if (device.Messages == null)
+        {
+            device.Messages = new List<DeviceDetails>();
+        }
+        device.Messages.Add(msg);
+        if (!device.Reference)
+        {
+            device.LastEnergyVal = msg.Aenergy.Total;
+            device.Reference = true;
+            Console.WriteLine($"\nREFERENCE VALUE\n----------TOPIC {device.Topic}\nLast Energy Value: {device.LastEnergyVal}\n");
+        }
+        else
+        {
+            Console.WriteLine($"\n NEW ENERGY VALUES from the topic {device.Topic} at {DateTimeOffset.Now}");
+            Console.WriteLine($"Last Energy Value: {device.LastEnergyVal:F3}");
+            Console.WriteLine($"Actual Energy Value: {msg.Aenergy.Total:F3}");
+            double tempEnergyConsumed = 0;
+            tempEnergyConsumed = Math.Round(msg.Aenergy.Total - device.LastEnergyVal, 3);
+            device.TotalEnergyConsumed += tempEnergyConsumed;
+            device.LastEnergyVal = msg.Aenergy.Total;
+            Console.WriteLine($"TOTAL ENERGY CONSUMED: {device.TotalEnergyConsumed:F3}\n");
+
+            room.TotalEnergy += tempEnergyConsumed;
+            room.TotalEnergy = Math.Round(room.TotalEnergy, 3);
+
+            office.TotalEnergy += tempEnergyConsumed;
+            office.TotalEnergy = Math.Round(office.TotalEnergy, 3);
+
+            MyCompany.TotalEnergy += tempEnergyConsumed;
+            MyCompany.TotalEnergy = Math.Round(MyCompany.TotalEnergy, 3);
+        }
+    }
+
+
     private void onMqttConnect()
     {
-        foreach (var office in MyCompany.Offices)
-        {
-            foreach (var room in office.Rooms)
-            {
-                foreach (var device in room.Devices)
-                {
-                    device.CheckAndSubscribe(_logger);
-                }
-            }
-        }
-        _logger.LogInformation($"Subscribed to all topics: {DateTimeOffset.Now}");
+        MQTTController.GetDataAsync(MyCompany.Topic);
+        _logger.LogInformation($"Subscribed to topic: {MyCompany.Topic} at {DateTimeOffset.Now}");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -156,11 +247,11 @@ public sealed class Worker : BackgroundService
             {
                 foreach (var room in office.Rooms)
                 {
-                    foreach (var MyDevice in room.Devices)
+                    foreach (var device in room.Devices)
                     {
-                        statusFeedback(MyDevice);
-                        MyDevice.Messages.Clear();
-                        Console.WriteLine($"\n                         Device {MyDevice.Name} Energy: {MyDevice.TotalEnergyConsumed:F3}");
+                        statusFeedback(device);
+                        device.Messages.Clear();
+                        Console.WriteLine($"\n                         Device {device.Name} Energy: {device.TotalEnergyConsumed:F3}");
                     }
                   Console.WriteLine($"\n                         Room {room.Name} Energy: {room.TotalEnergy:F3}");
                 }
@@ -171,7 +262,6 @@ public sealed class Worker : BackgroundService
             Console.WriteLine($"\n*************************Company {MyCompany.Name} Energy: {MyCompany.TotalEnergy:F3}");
         }
     }
-
 
     private void statusFeedback(Device device)
     {
