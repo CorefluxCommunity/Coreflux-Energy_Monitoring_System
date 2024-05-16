@@ -1,0 +1,9 @@
+
+[[devices]]
+topic = "Coreflux/Porto/MeetingRoom/Light1/status/switch:0"
+
+[[devices]]
+topic = "Coreflux/Porto/Kitchen/BalconyLamp/status/switch:0"
+
+[[devices]]
+topic = "Coreflux/SF1/ServerRoom/Light1/status/switch:0"
