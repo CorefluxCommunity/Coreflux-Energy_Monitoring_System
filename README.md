@@ -14,25 +14,8 @@ This project is an Energy Consumption Monitoring System that aggregates and repo
 
 - **Detailed Logging:** Logs detailed information about energy consumption for each device, room, office, and the entire company in order to ensure that everything is being sent to the right locations.
 
-## Project Structure
-
-- **Worker:** The core service that runs continuously, processing incoming MQTT messages and updating energy consumption data.
-
-- **Company, Office, Room, Device:** Classes representing the hierarchy of the organization, each segment with its own energy consumption data.
-
-- **DeviceDetails:** Class representing the detailed energy data reported by each Shelly device.
-
-### Data Processing
-
-- **Device Level:** Each device reports its energy data, which is processed and stored.
-
-- **Room Level:** The energy data from all devices in a room is aggregated to provide room-level consumption.
-
-- **Office Level:** The energy data from all rooms in an office is aggregated to provide office-level consumption.
-
-- **Company Level:** The energy data from all offices is aggregated to provide company-level consumption.
-
 ## Getting Started
+
 ### Prerequisites
 - .NET SDK 8.0
 - Shelly devices properly configured and connected to the MQTT broker
@@ -61,9 +44,26 @@ The system is configured using a TOML file named **config.toml**. This file shou
 [company]
 topic = "Coreflux/#"
 ```
+## Project Structure
+
+- **Worker:** The core service that runs continuously, processing incoming MQTT messages and updating energy consumption data.
+
+- **Company, Office, Room, Device:** Classes representing the hierarchy of the organization, each segment with its own energy consumption data.
+
+- **DeviceDetails:** Class representing the detailed energy data reported by each Shelly device.
+
+### Data Processing
+
+- **Device Level:** Each device reports its energy data, which is processed and stored.
+
+- **Room Level:** The energy data from all devices in a room is aggregated to provide room-level consumption.
+
+- **Office Level:** The energy data from all rooms in an office is aggregated to provide office-level consumption.
+
+- **Company Level:** The energy data from all offices is aggregated to provide company-level consumption.
 
 ### Usage
 
 The system will automatically subscribe to the MQTT topics specified in the configuration file and start collecting energy data from Shelly devices. The collected data will be aggregated and logged at regular intervals.
 
-Using MQTT Explorer will help visualise the publication of each message, thus showing the energy spent on each topic segment.
+Using MQTT Explorer will help visualise the publication of each message, showing the energy spent on each topic segment.
