@@ -32,6 +32,12 @@ This project is an Energy Consumption Monitoring System that aggregates and repo
 
 - **Company Level:** The energy data from all offices is aggregated to provide company-level consumption.
 
+### Usage
+
+The system will automatically subscribe to the MQTT topics specified in the configuration file and start collecting energy data from Shelly devices. The collected data will be aggregated and logged at regular intervals.
+
+Using MQTT Explorer will help visualise the publication of each message, showing the energy spent on each topic segment.
+
 ## Getting Started
 ### Prerequisites
 - .NET SDK 8.0
@@ -61,9 +67,3 @@ The system is configured using a TOML file named **config.toml**. This file shou
 [company]
 topic = "Coreflux/#"
 ```
-
-### Usage
-
-The system will automatically subscribe to the MQTT topics specified in the configuration file and start collecting energy data from Shelly devices. The collected data will be aggregated and logged at regular intervals.
-
-Using MQTT Explorer will help visualise the publication of each message, showing the energy spent on each topic segment.
