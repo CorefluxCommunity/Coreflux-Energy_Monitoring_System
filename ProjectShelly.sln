@@ -7,12 +7,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectShelly", "ProjectShe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectShelly.Tests", "ProjectShelly.Tests\ProjectShelly.Tests.csproj", "{8212AD21-189E-42D8-B35F-799DBD79940E}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rita", "Rita\Rita.csproj", "{94DD434F-8E9E-4EF4-9EB2-6DB1318CF90C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{94DD434F-8E9E-4EF4-9EB2-6DB1318CF90C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94DD434F-8E9E-4EF4-9EB2-6DB1318CF90C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{162B4740-0EC0-4559-A5B3-92EF99F7EBC2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{162B4740-0EC0-4559-A5B3-92EF99F7EBC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{162B4740-0EC0-4559-A5B3-92EF99F7EBC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
