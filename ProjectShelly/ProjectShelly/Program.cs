@@ -1,7 +1,19 @@
 using App.WorkerService;
 
-HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+public class Program
+{
+	public static void Main(string[] args)
+	{
+		// Create a builder for the host application
+		HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+		
+		// Register the Worker service with the dependency injection container
+		builder.Services.AddHostedService<Worker>();
 
-builder.Services.AddHostedService<Worker>();
-IHost host = builder.Build();
-host.Run();
+		// Build the host
+		IHost host = builder.Build();
+		
+		// Run the host application
+		host.Run();
+	}
+}
