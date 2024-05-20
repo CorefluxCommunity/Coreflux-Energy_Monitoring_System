@@ -37,7 +37,9 @@ class Build : NukeBuild
 
     AbsolutePath BuildOutDirectory => ArtifactsDirectory / "buildout";
 
-    AbsolutePath ZipFilePath => ArtifactsDirectory / "build.zip";
+    AbsolutePath CompressedBuild => ArtifactsDirectory / "compressed";
+
+    AbsolutePath ZipFilePath => CompressedBuild / "build.zip";
 
     AbsolutePath TargetPath => DeployZipDirectory / "DeployedBuild.zip";
 
@@ -51,29 +53,42 @@ class Build : NukeBuild
                 .Executes(() =>
                 {
                     Log.Information(
-                        "Ensuring the existence of {0}, {1}, {2}, {3}, {4}.",
+                        "Ensuring the existence of {0}, {1}, {2}, {3}, {4}, {5}.",
                         ArtifactsDirectory,
                         BuildOutDirectory,
                         ZipFilePath,
+                        CompressedBuild,
                         TargetPath,
                         DeployZipDirectory
                     );
 
-                    if (Directory.Exists(BuildOutDirectory))
+                    if (Directory.Exists(ArtifactsDirectory))
                     {
                         Log.Information(
-                            "Directory {0} already exists and will be overwritten.",
+                            "Directory {0} already exists and will be cleared.",
+                            ArtifactsDirectory
+                        );
+                    }
+                        Directory.CreateDirectory(ArtifactsDirectory);
+
+                    if (Directory.Exists(BuildOutDirectory ))
+                    {
+                        Log.Information(
+                            "Directory {0} already exists and will be cleared.",
                             BuildOutDirectory
                         );
-
                         Directory.Delete(BuildOutDirectory, true);
-                        Directory.Delete(ArtifactsDirectory, true);
                     }
-                    else
+                
+                    Directory.CreateDirectory(BuildOutDirectory);
+
+                    if (Directory.Exists(CompressedBuild))
                     {
-                        Directory.CreateDirectory(BuildOutDirectory);
+                        Directory.Delete(CompressedBuild, true);
                     }
 
+                    Directory.CreateDirectory(CompressedBuild);
+    
                     if (File.Exists(ZipFilePath))
                     {
                         Log.Information(
