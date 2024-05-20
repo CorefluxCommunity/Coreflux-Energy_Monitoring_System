@@ -78,6 +78,6 @@ graph TD;
     C --> E{Device already created?};
     E -- Yes --> F[Calculate energy difference] --> H[Save new data];
     E -- No --> G[Create a new instance of that device and save a reference value] --> H[Save new data];
-    H --> I[Wait 10 seconds] --> J[Publish data to the right topic segment] --> A;
+    H --> I[Wait 10 seconds] --> J[Publish data to the right topic segment] --> K[Wait for a new MQTT Payload] --> A;
    
 ```
