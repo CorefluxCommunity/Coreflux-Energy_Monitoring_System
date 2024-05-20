@@ -67,3 +67,17 @@ topic = "Coreflux/#"
 The system will automatically subscribe to the MQTT topics specified in the configuration file and start collecting energy data from Shelly devices. The collected data will be aggregated and logged at regular intervals.
 
 Using MQTT Explorer will help visualise the publication of each message, showing the energy spent on each topic segment.
+
+### Data Flow Diagram
+
+```mermaid
+graph TD;
+    A[Arrival of new MQTT Payload] --> B{Parse the topic. Is it valid?};
+    B -- Yes --> C[Parse Data];
+    B -- No --> D[Wait for a valid message];
+    C --> E{Device already created?};
+    E -- Yes --> F[Calculate energy difference] --> H[Save new data];
+    E -- No --> G[Create a new instance of that device and save a reference value] --> H[Save new data];
+    H --> I[Wait 10 seconds] --> J[Publish data to the right topic segment] --> K[Wait for a new MQTT Payload] --> A;
+   
+```
