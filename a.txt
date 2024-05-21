@@ -1,0 +1,9 @@
+ProjectShelly
+ProjectShelly.Tests
+ProjectShelly.sln
+README.md
+Rita
+a.txt
+build.cmd
+build.ps1
+build.sh
