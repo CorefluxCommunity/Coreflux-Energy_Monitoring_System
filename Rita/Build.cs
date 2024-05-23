@@ -26,16 +26,14 @@ using Nuke.Common.CI.GitHubActions;
     GitHubActionsImage.MacOsLatest,
     OnPushBranches = new[] {"main"},
     OnPullRequestBranches = new[] {"main"},
-    InvokedTargets = [nameof(Init)],
-    ImportSecrets = [nameof(NuGetAPIKey)],
-    AutoGenerate = false
+    ImportSecrets = [nameof(NuGetAPIKey)]
     )]
 
 
 class Build : NukeBuild
 {
     
-    public static int Main() => Execute<Build>(x => x.Init);
+    public static int Main() => Execute<Build>(x => x.Init, x => x.Deploy);
 
     [Solution]
     readonly Solution Solution;
@@ -131,8 +129,7 @@ class Build : NukeBuild
                             var projectPath = paths.ProvidePath(runtime, Phase.Build);
                             var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
                             
-                            // var sourceConfigFile = Directory.GetFiles(RootDirectory, "config.toml", SearchOption.AllDirectories).FirstOrDefault();
-                            // var configFileDestination = Path.Combine(outputDirectory, "config.toml");
+                            
 
                             Log.Information($"Compiling the program for {runtime.dotNetIdentifier}...");
 

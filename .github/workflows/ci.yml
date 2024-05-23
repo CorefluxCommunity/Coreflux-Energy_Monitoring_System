@@ -37,10 +37,10 @@ jobs:
             .nuke/temp
             ~/.nuget/packages
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj', '**/Directory.Packages.props') }}
-      - name: 'Run: Init'
-        run: ./build.cmd Init
+      - name: 'Run: '
+        run: ./build.cmd 
         env:
-          NuGetAPIKey: ${{ secrets.SECRET_KEY }}
+          NuGetAPIKey: ${{ secrets.NUGET_APIKEY }}
   windows-latest:
     name: windows-latest
     runs-on: windows-latest
@@ -53,10 +53,10 @@ jobs:
             .nuke/temp
             ~/.nuget/packages
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj', '**/Directory.Packages.props') }}
-      - name: 'Run: Init'
-        run: ./build.cmd Init
+      - name: 'Run: '
+        run: ./build.cmd 
         env:
-          NuGetAPIKey: ${{ secrets.SECRET_KEY }}
+          NuGetAPIKey: ${{ secrets.NUGET_APIKEY }}
   macos-latest:
     name: macos-latest
     runs-on: macos-latest
@@ -69,7 +69,7 @@ jobs:
             .nuke/temp
             ~/.nuget/packages
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj', '**/Directory.Packages.props') }}
-      - name: 'Run: Init'
-        run: ./build.cmd Init
+      - name: 'Run: '
+        run: ./build.cmd 
         env:
-          NuGetAPIKey: ${{ secrets.SECRET_KEY }}
+          NuGetAPIKey: ${{ secrets.NUGET_APIKEY }}
