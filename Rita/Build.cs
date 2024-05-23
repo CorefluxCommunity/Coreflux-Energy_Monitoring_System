@@ -52,6 +52,10 @@ class Build : NukeBuild
             _.Before(Clean)
                 .Executes(() =>
                 {
+                    if (ENERGY_SECRET == "Hello World")
+                    {
+                        Log.Information("Qualquercoisa");
+                    }
                     paths = new AbsolutePathList(NukeBuild.RootDirectory);
 
                     Log.Information($"The Secret key is: {ENERGY_SECRET}");
