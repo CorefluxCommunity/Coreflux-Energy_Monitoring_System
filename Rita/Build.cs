@@ -53,13 +53,10 @@ class Build : NukeBuild
             _.Before(Clean)
                 .Executes(() =>
                 {
-                    if (string.IsNullOrEmpty(ENERGY_SECRET))
-                    {
-                        Log.Information("Qualquercoisa");
-                    }
+                 
                     paths = new AbsolutePathList(NukeBuild.RootDirectory);
 
-                    Log.Information($"The Secret key is: {ENERGY_SECRET}");
+                   
 
                     runtimes.Add(new Runtime("win-x64"));
                     runtimes.Add(new Runtime("linux-x64"));
