@@ -20,14 +20,14 @@ using static Nuke.Common.IO.PathConstruction;
 using Nuke.Common.CI.GitHubActions;
 
 [GitHubActions(
-    "ci",
+    "continuous",
     GitHubActionsImage.UbuntuLatest,
-    GitHubActionsImage.WindowsLatest,
-    GitHubActionsImage.MacOsLatest,
-    OnPushBranches = new[] {"main"},
-    OnPullRequestBranches = new[] {"main"},
-    ImportSecrets = [nameof(NuGetAPIKey)]
+    On = [GitHubActionsTrigger.Push],
+    InvokedTargets = [nameof(Deploy)],
+    ImportSecrets = [nameof(ENERGY_SECRET)]
     )]
+
+
 
 
 class Build : NukeBuild
@@ -43,7 +43,7 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
-    [Parameter("API Key for NuGet")] [Secret] readonly string NuGetAPIKey;
+    [Parameter("API Key for NuGet")] [Secret] readonly string ENERGY_SECRET;
     RuntimeConfig runtimes = new RuntimeConfig();
     AbsolutePathList paths;
 
@@ -54,7 +54,7 @@ class Build : NukeBuild
                 {
                     paths = new AbsolutePathList(NukeBuild.RootDirectory);
 
-                    Log.Information($"The Secret key is: {NuGetAPIKey}");
+                    Log.Information($"The Secret key is: {ENERGY_SECRET}");
 
                     runtimes.Add(new Runtime("win-x64"));
                     runtimes.Add(new Runtime("linux-x64"));
