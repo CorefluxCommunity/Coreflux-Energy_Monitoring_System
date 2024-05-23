@@ -24,7 +24,8 @@ using Nuke.Common.CI.GitHubActions;
     GitHubActionsImage.UbuntuLatest,
     On = [GitHubActionsTrigger.Push],
     InvokedTargets = [nameof(Deploy)],
-    ImportSecrets = [nameof(ENERGY_SECRET)]
+    ImportSecrets = [nameof(ENERGY_SECRET)],
+    AutoGenerate = false
     )]
 
 
@@ -52,7 +53,7 @@ class Build : NukeBuild
             _.Before(Clean)
                 .Executes(() =>
                 {
-                    if (ENERGY_SECRET == "Hello World")
+                    if (string.IsNullOrEmpty(ENERGY_SECRET))
                     {
                         Log.Information("Qualquercoisa");
                     }
