@@ -44,7 +44,7 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
-    [Parameter("API Key for NuGet")] [Secret] readonly string ENERGY_SECRET;
+    readonly string ENERGY_SECRET;
     RuntimeConfig runtimes = new RuntimeConfig();
     AbsolutePathList paths;
 
