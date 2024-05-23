@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Policy;
 using Microsoft.Build.Framework;
@@ -16,12 +17,24 @@ using Serilog;
 using static Nuke.Common.EnvironmentInfo;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.IO.PathConstruction;
+using Nuke.Common.CI.GitHubActions;
+
+[GitHubActions(
+    "continuous",
+    GitHubActionsImage.UbuntuLatest,
+    On = [GitHubActionsTrigger.Push],
+    InvokedTargets = [nameof(Deploy)],
+    ImportSecrets = [nameof(ENERGY_SECRET)],
+    AutoGenerate = false
+    )]
+
+
+
 
 class Build : NukeBuild
 {
+    
     public static int Main() => Execute<Build>(x => x.Init, x => x.Deploy);
-
-    public bool TestsSucceeded;
 
     [Solution]
     readonly Solution Solution;
@@ -31,79 +44,31 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
-    AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
-
-    AbsolutePath TestDirectory => RootDirectory / "ProjectShelly.Tests" / "ProjectShelly.Tests.csproj";
-
-    AbsolutePath BuildOutDirectory => ArtifactsDirectory / "buildout";
-
-    AbsolutePath CompressedBuild => ArtifactsDirectory / "compressed";
-
-    AbsolutePath ZipFilePath => CompressedBuild / "build.zip";
-
-    AbsolutePath TargetPath => DeployZipDirectory / "DeployedBuild.zip";
-
-    AbsolutePath ProjectPath => RootDirectory / "ProjectShelly" / "ProjectShelly.csproj";
-
-    AbsolutePath DeployZipDirectory => ArtifactsDirectory / "deployed";
+    readonly string ENERGY_SECRET;
+    RuntimeConfig runtimes = new RuntimeConfig();
+    AbsolutePathList paths;
 
     Target Init =>
         _ =>
             _.Before(Clean)
                 .Executes(() =>
                 {
-                    Log.Information(
-                        "Ensuring the existence of {0}, {1}, {2}, {3}, {4}, {5}.",
-                        ArtifactsDirectory,
-                        BuildOutDirectory,
-                        ZipFilePath,
-                        CompressedBuild,
-                        TargetPath,
-                        DeployZipDirectory
-                    );
+                 
+                    paths = new AbsolutePathList(NukeBuild.RootDirectory);
 
-                    if (Directory.Exists(ArtifactsDirectory))
+                   
+
+                    runtimes.Add(new Runtime("win-x64"));
+                    runtimes.Add(new Runtime("linux-x64"));
+                    runtimes.Add(new Runtime("linux-arm64"));
+                    runtimes.Add(new Runtime("linux-arm")); // 32-bit ARM
+                    runtimes.Add(new Runtime("osx-x64")); // Intel-based macOS
+                    runtimes.Add(new Runtime("osx-arm64")); // Apple Silicon macOS
+                    
+
+                    foreach (var managedPath in paths.Values)
                     {
-                        Log.Information(
-                            "Directory {0} already exists and will be cleared.",
-                            ArtifactsDirectory
-                        );
-                    }
-                        Directory.CreateDirectory(ArtifactsDirectory);
-
-                    if (Directory.Exists(BuildOutDirectory ))
-                    {
-                        Log.Information(
-                            "Directory {0} already exists and will be cleared.",
-                            BuildOutDirectory
-                        );
-                        Directory.Delete(BuildOutDirectory, true);
-                    }
-                
-                    Directory.CreateDirectory(BuildOutDirectory);
-
-                    if (Directory.Exists(CompressedBuild))
-                    {
-                        Directory.Delete(CompressedBuild, true);
-                    }
-
-                    Directory.CreateDirectory(CompressedBuild);
-    
-                    if (File.Exists(ZipFilePath))
-                    {
-                        Log.Information(
-                            "Zip file already exists and will be overwritten at {0}",
-                            ZipFilePath
-                        );
-
-                        File.Delete(ZipFilePath);
-                    }
-
-                    if (File.Exists(TargetPath))
-                    {
-                        Log.Information("Deployed file will be overwritten at {0}.", TargetPath);
-
-                        File.Delete(TargetPath);
+                        paths.EnsureDirectory(managedPath.Path, managedPath.Rule);
                     }
                 });
 
@@ -148,7 +113,7 @@ class Build : NukeBuild
                 .Executes(() =>
                 {
                     DotNetTasks.DotNetTest(_ =>
-                        _.SetProjectFile(TestDirectory)
+                        _.SetProjectFile(paths.GetPathForPhase(Phase.Test))
                     );
                 });
 
@@ -158,24 +123,39 @@ class Build : NukeBuild
                 .Executes(() =>
                 {
                     try
-                    {
+                    {   
+                        
+
+                        foreach (var runtime in runtimes)
+                        {
+                            var projectPath = paths.ProvidePath(runtime, Phase.Build);
+                            var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
+                            
+                            
+
+                            Log.Information($"Compiling the program for {runtime.dotNetIdentifier}...");
+
+
                         DotNetTasks.DotNetPublish(s =>
-                            s.SetProject(ProjectPath)
+                            s.SetProject(projectPath)
                                 .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
-                                //.AddProperty("CopyLocalLockFileAssemblies", false)
                                 .AddProperty("PublishSelfContained", true)
-                                .AddProperty("AssemblyName", "linkin")
-                                .SetRuntime("win-x64")
+                                .AddProperty("AssemblyName", "ShellyApp")
+                                .SetRuntime(runtime.dotNetIdentifier)
                                 .SetConfiguration("Release")
                                 .EnablePublishSingleFile()
-                                //.EnableSelfContained()
-                                .SetOutput(BuildOutDirectory)
-                        );
+                                .SetOutput(outputDirectory));
+                        
 
+                        // File.Copy(sourceConfigFile, configFileDestination);
+                        
                         Log.Information(
                             "Compilation outputs are directed to: {0}",
-                            BuildOutDirectory
+                            outputDirectory
+                            
+                        
                         );
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -189,26 +169,19 @@ class Build : NukeBuild
             _.DependsOn(Compile)
                 .Executes(() =>
                 {
-                    try
-                    {
-                        if (Directory.Exists(BuildOutDirectory))
-                        {
-                            ZipFile.CreateFromDirectory(BuildOutDirectory, ZipFilePath);
-                            Log.Information(
-                                "Application compressed successfully into {0}",
-                                ZipFilePath
-                            );
-                        }
-                        else
-                        {
-                            Log.Warning("Source directory does not exist: {0}", BuildOutDirectory);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex.Message);
-                        throw;
-                    }
+                
+                   foreach (var runtime in runtimes)
+                   {
+                    var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
+                    var zipFilePath = Path.ChangeExtension(paths.ProvidePath(runtime, Phase.Zip), ".zip");
+
+                    Log.Information($"Compressing output for {runtime.dotNetIdentifier}");
+
+                    ZipFile.CreateFromDirectory(outputDirectory, zipFilePath);
+                    
+                    Log.Information($"Application compressed successfully into {zipFilePath}");
+            
+                   }
                 });
 
     Target Deploy =>
@@ -216,16 +189,26 @@ class Build : NukeBuild
             _.DependsOn(Compress)
                 .Executes(() =>
                 {
-                    try
+                    
+                    foreach (var runtime in runtimes)
                     {
-                        CopyFile(ZipFilePath, TargetPath, FileExistsPolicy.Overwrite);
 
-                        Log.Information("Application deployed Successfully to {0}", TargetPath);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error($"Deployment Failed: {ex.Message}");
-                        throw;
+                        var zipFilePath = Path.ChangeExtension(paths.ProvidePath(runtime, Phase.Zip), ".zip");
+                        var targetPath = Path.ChangeExtension(paths.ProvidePath(runtime, Phase.Deploy), ".zip");
+
+                        Log.Information($"Deploying {zipFilePath} to {targetPath}");
+
+                        CopyFile(zipFilePath, targetPath, FileExistsPolicy.Overwrite);
+
+                        if (File.Exists(zipFilePath))
+                        {
+                            Log.Information($"Application deployed successfully to {targetPath}");
+
+                        }
+                        else 
+                        {
+                            Log.Error($"Failed to find compressed file: {zipFilePath}");
+                        }
                     }
                 });
 }
