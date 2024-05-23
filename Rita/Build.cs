@@ -17,11 +17,25 @@ using Serilog;
 using static Nuke.Common.EnvironmentInfo;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.IO.PathConstruction;
+using Nuke.Common.CI.GitHubActions;
+
+[GitHubActions(
+    "ci",
+    GitHubActionsImage.UbuntuLatest,
+    GitHubActionsImage.WindowsLatest,
+    GitHubActionsImage.MacOsLatest,
+    OnPushBranches = new[] {"main"},
+    OnPullRequestBranches = new[] {"main"},
+    InvokedTargets = [nameof(Init)],
+    ImportSecrets = [nameof(NuGetAPIKey)],
+    AutoGenerate = false
+    )]
 
 
 class Build : NukeBuild
 {
-    public static int Main() => Execute<Build>(x => x.Init, x => x.Deploy);
+    
+    public static int Main() => Execute<Build>(x => x.Init);
 
     [Solution]
     readonly Solution Solution;
@@ -31,6 +45,7 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
+    [Parameter("API Key for NuGet")] [Secret] readonly string NuGetAPIKey;
     RuntimeConfig runtimes = new RuntimeConfig();
     AbsolutePathList paths;
 
@@ -41,7 +56,7 @@ class Build : NukeBuild
                 {
                     paths = new AbsolutePathList(NukeBuild.RootDirectory);
 
-                    
+                    Log.Information($"The Secret key is: {NuGetAPIKey}");
 
                     runtimes.Add(new Runtime("win-x64"));
                     runtimes.Add(new Runtime("linux-x64"));
