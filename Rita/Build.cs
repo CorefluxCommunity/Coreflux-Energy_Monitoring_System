@@ -68,7 +68,7 @@ class Build : NukeBuild
         Phase.Zip
     );
 
-string localFilePath = Path.Combine("RootDirectory", "artifacts", "compressed", "linux-x64.zip");
+string localFilePath = Path.Combine(RootDirectory, "artifacts", "compressed", "linux-x64.zip");
 
     Target TestThis =>
         _ =>
