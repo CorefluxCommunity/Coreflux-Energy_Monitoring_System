@@ -73,17 +73,33 @@ class Build : NukeBuild
         _ =>
             _.Executes(() =>
             {
+                // Convert the string to a byte array
                 byte[] byteArray = Encoding.UTF8.GetBytes(ENERGY_SECRET);
 
                 // Create a MemoryStream from the byte array
-                MemoryStream stream = new MemoryStream(byteArray);
+                using (MemoryStream stream = new MemoryStream(byteArray))
+                {
+                    try
+                    {
+                        // Create the PrivateKeyFile instance using the stream
+                        PrivateKeyFile key = new PrivateKeyFile(stream);
 
-                PrivateKeyFile key = new(stream);
-                SftpClient sftpClient = new SftpClient("209.38.44.94", "root", key);
-                sftpClient.Connect();
-                Log.Information(sftpClient.IsConnected.ToString());
+                        // Use the PrivateKeyFile instance to create the SftpClient
+                        using (SftpClient sftpClient = new SftpClient("209.38.44.94", "root", key))
+                        {
+                            // Connect to the SFTP server
+                            sftpClient.Connect();
 
+                            // Log the connection status
+                            Log.Information(sftpClient.IsConnected.ToString());
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error("Failed to connect to SFTP server: " + ex.Message);
+                    }
 
+                }
 
             });
     Target Init =>
