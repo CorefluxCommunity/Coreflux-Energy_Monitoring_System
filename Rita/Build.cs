@@ -92,12 +92,12 @@ class Build : NukeBuild
                         {
                             // Connect to the SFTP server
                             sftpClient.Connect();
-
+                            sftpClient.ChangeDirectory(RemoteDirectory);
                             Log.Information(sftpClient.IsConnected.ToString());
                             
                             using (FileStream fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read))
                             {
-                                sftpClient.UploadFile(fileStream, RemoteDirectory);
+                                sftpClient.UploadFile(fileStream, Path.GetFileName(localFilePath));
                             }
 
                             sftpClient.Disconnect();
