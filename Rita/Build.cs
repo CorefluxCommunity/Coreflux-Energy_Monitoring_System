@@ -36,7 +36,7 @@ using static Nuke.Common.IO.PathConstruction;
 )]
 class Build : NukeBuild
 {
-    public static int Main() => Execute<Build>(x => x.Init, x => x.TestThis);
+    public static int Main() => Execute<Build>(x => x.TestThis);
 
     [Solution]
     readonly Solution Solution;
