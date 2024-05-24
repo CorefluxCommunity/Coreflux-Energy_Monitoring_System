@@ -98,7 +98,7 @@ class Build : NukeBuild
                             using (FileStream fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read))
                             {   
                                 string fileToRemote = Path.GetFileName(localFilePath);
-                                sftpClient.UploadFile(fileStream, fileToRemote);
+                                sftpClient.UploadFile(fileStream, fileToRemote + "linux-x64.zip");
                             }
 
                             sftpClient.Disconnect();
