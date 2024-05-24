@@ -73,8 +73,12 @@ class Build : NukeBuild
         _ =>
             _.Executes(() =>
             {
+                byte[] byteArray = Encoding.UTF8.GetBytes(ENERGY_SECRET);
 
-                PrivateKeyFile  key = new(ENERGY_SECRET);
+                // Create a MemoryStream from the byte array
+                MemoryStream stream = new MemoryStream(byteArray);
+
+                PrivateKeyFile key = new(stream);
                 SftpClient sftpClient = new SftpClient("209.38.44.94", "root", key);
                 sftpClient.Connect();
                 Log.Information(sftpClient.IsConnected.ToString());
