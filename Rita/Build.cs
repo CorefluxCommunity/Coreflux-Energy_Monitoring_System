@@ -208,10 +208,12 @@ class Build : NukeBuild
             _.DependsOn(Compress)
                 .Executes(() =>
                 {
-
+                    
+                    string tempSshKeyPath = Path.GetTempFileName();
+                    File.WriteAllText(tempSshKeyPath, SshKey);
                 
 
-                    PrivateKeyFile keyFile = new PrivateKeyFile(SshKey);
+                    PrivateKeyFile keyFile = new PrivateKeyFile(tempSshKeyPath);
                     AuthenticationMethod[] methods = new AuthenticationMethod[] {new PrivateKeyAuthenticationMethod(SshUsername, keyFile)};
                     ConnectionInfo connectionInfo = new ConnectionInfo(SshHost, SshPort, SshUsername, methods);
 
@@ -221,6 +223,8 @@ class Build : NukeBuild
 
                         deployer.Deploy(runtime);
                     }
+
+                    File.Delete(tempSshKeyPath);
                   
                 });
 }
