@@ -27,6 +27,7 @@ using Cloud.Interfaces;
 using Renci.SshNet;
 using Cloud.Deployment;
 using System.Text;
+using Renci.SshNet.Security;
 
 [GitHubActions(
     "continuous",
@@ -53,8 +54,7 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
-    readonly string ENERGY_SECRET;
-    string SshKey => Environment.GetEnvironmentVariable("ENERGY_SECRET");
+    
 
     [Parameter("SSH Username")]
     readonly string SshUsername = "root";
@@ -65,17 +65,20 @@ class Build : NukeBuild
     [Parameter("SSH Port")]
     readonly int SshPort = 22;
 
-
+     [Parameter] [Secret]
+    private readonly Key ENERGY_SECRET;
 
     [Parameter("Remote Directory")]
     readonly string RemoteDirectory = "/root/aggregator";
     RuntimeConfig runtimeConfig = new RuntimeConfig();
 
     Runtime runtime => runtimeConfig.Runtime;
-    AbsolutePathList paths = PathServiceProvider.paths;
+    readonly AbsolutePathList paths = PathServiceProvider.paths;
   
 
     readonly AbsolutePath LocalDirectoryForDeploy = PathServiceProvider.paths.GetPathForPhase(Phase.Zip);
+
+
 
     Target Init =>
         _ =>
@@ -209,16 +212,9 @@ class Build : NukeBuild
             _.DependsOn(Compress)
                 .Executes(() =>
                 {
-
-
-                    PrivateKeyFile keyFile;
-                    using (MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(SshKey)))
-                    {
-                        keyFile = new PrivateKeyFile(stream);
-                    }
-                
-
                     
+
+                    PrivateKeyFile keyFile = new PrivateKeyFile(ENERGY_SECRET);
                     AuthenticationMethod[] methods = new AuthenticationMethod[] {new PrivateKeyAuthenticationMethod(SshUsername, keyFile)};
                     ConnectionInfo connectionInfo = new ConnectionInfo(SshHost, SshPort, SshUsername, methods);
 
@@ -229,7 +225,7 @@ class Build : NukeBuild
                         deployer.Deploy(runtime);
                     }
 
-                    
+                   
                   
                 });
 }
