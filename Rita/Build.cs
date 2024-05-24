@@ -68,6 +68,7 @@ class Build : NukeBuild
         Phase.Zip
     );
 
+string localFilePath = Path.Combine("RootDirectory", "artifacts", "compressed", "*.zip");
 
     Target TestThis =>
         _ =>
@@ -92,7 +93,7 @@ class Build : NukeBuild
                             // Connect to the SFTP server
                             sftpClient.Connect();
                             
-                            using (FileStream fileStream = new FileStream(LocalDirectoryForDeploy, FileMode.Open))
+                            using (FileStream fileStream = new FileStream(localFilePath, FileMode.Open))
                             {
                                 sftpClient.UploadFile(fileStream, RemoteDirectory);
                             }
