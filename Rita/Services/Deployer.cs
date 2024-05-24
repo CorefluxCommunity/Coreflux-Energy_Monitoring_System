@@ -24,7 +24,7 @@ namespace Cloud.Deployment
 
 
 
-        public Deployer(ISftpService sftpService, string localDirectory, string remoteDirectory, AbsolutePathList paths)
+        public Deployer(ISftpService sftpService, string localDirectory, string remoteDirectory)
         {
             _sftpService = sftpService;
 
@@ -32,7 +32,6 @@ namespace Cloud.Deployment
 
             _remoteDirectory = remoteDirectory;
 
-            _paths = paths;
 
 
 

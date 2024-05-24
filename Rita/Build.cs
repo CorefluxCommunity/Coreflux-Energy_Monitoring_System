@@ -1,49 +1,41 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Collections.Generic;
 using System.Linq;
 using System.Security.Policy;
+using System.Text;
+using Cloud.Deployment;
+using Cloud.Interfaces;
+using Cloud.Models;
+using Cloud.Services;
 using Microsoft.Build.Framework;
 using Nuke.Common;
 using Nuke.Common.CI;
+using Nuke.Common.CI.GitHubActions;
 using Nuke.Common.Execution;
-using Nuke.Common.Tools;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Tooling;
+using Nuke.Common.Tools;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Utilities.Collections;
+using Renci.SshNet;
+using Renci.SshNet.Security;
 using Serilog;
-
 using static Nuke.Common.EnvironmentInfo;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.IO.PathConstruction;
-using Nuke.Common.CI.GitHubActions;
-
-using Cloud.Models;
-using Cloud.Services;
-using Cloud.Interfaces;
-using Renci.SshNet;
-using Cloud.Deployment;
-using System.Text;
-using Renci.SshNet.Security;
 
 [GitHubActions(
     "continuous",
     GitHubActionsImage.UbuntuLatest,
     On = [GitHubActionsTrigger.Push],
-    
     ImportSecrets = [nameof(ENERGY_SECRET)],
     AutoGenerate = false
-    )]
-
-
-
-
+)]
 class Build : NukeBuild
 {
-    
     public static int Main() => Execute<Build>(x => x.Init, x => x.Deploy);
 
     [Solution]
@@ -54,8 +46,6 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
-    
-
     [Parameter("SSH Username")]
     readonly string SshUsername = "root";
 
@@ -65,7 +55,9 @@ class Build : NukeBuild
     [Parameter("SSH Port")]
     readonly int SshPort = 22;
 
-     [Parameter] [Secret] private readonly string ENERGY_SECRET;
+    [Parameter]
+    [Secret]
+    private readonly string ENERGY_SECRET;
 
     [Parameter("Remote Directory")]
     readonly string RemoteDirectory = "/root/aggregator";
@@ -73,28 +65,24 @@ class Build : NukeBuild
 
     Runtime runtime => runtimeConfig.Runtime;
     readonly AbsolutePathList paths = PathServiceProvider.paths;
-  
 
-    readonly AbsolutePath LocalDirectoryForDeploy = PathServiceProvider.paths.GetPathForPhase(Phase.Zip);
-
-
+    readonly AbsolutePath LocalDirectoryForDeploy = PathServiceProvider.paths.GetPathForPhase(
+        Phase.Zip
+    );
 
     Target Init =>
         _ =>
             _.Before(Clean)
                 .Executes(() =>
                 {
-                 
-                DirectoryManager directoryManager = new();
-                AbsolutePathList paths = PathServiceProvider.paths;
-            
-                foreach (Phase phase in Enum.GetValues(typeof(Phase)))
+                    DirectoryManager directoryManager = new();
+                    AbsolutePathList paths = PathServiceProvider.paths;
+
+                    foreach (Phase phase in Enum.GetValues(typeof(Phase)))
                     {
                         ManagedPaths managedPath = paths[phase];
                         directoryManager.EnsureDirectory(managedPath.Path, managedPath.Rule);
                     }
-                
-                
                 });
 
     Target Clean =>
@@ -148,17 +136,11 @@ class Build : NukeBuild
                 .Executes(() =>
                 {
                     try
-                    {   
-                        
+                    {
+                        var projectPath = paths.ProvidePath(runtime, Phase.Build);
+                        var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
 
-                        
-                            var projectPath = paths.ProvidePath(runtime, Phase.Build);
-                            var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
-                            
-                            
-
-                            Log.Information($"Compiling the program for {runtime.dotNetIdentifier}...");
-
+                        Log.Information($"Compiling the program for {runtime.dotNetIdentifier}...");
 
                         DotNetTasks.DotNetPublish(s =>
                             s.SetProject(projectPath)
@@ -168,17 +150,13 @@ class Build : NukeBuild
                                 .SetRuntime(runtime.dotNetIdentifier)
                                 .SetConfiguration("Release")
                                 .EnablePublishSingleFile()
-                                .SetOutput(outputDirectory));
-                        
+                                .SetOutput(outputDirectory)
+                        );
 
-                        
                         Log.Information(
                             "Compilation outputs are directed to: {0}",
                             outputDirectory
-                            
-                        
                         );
-                        
                     }
                     catch (Exception ex)
                     {
@@ -192,18 +170,17 @@ class Build : NukeBuild
             _.DependsOn(Compile)
                 .Executes(() =>
                 {
-                
-                   
-                        var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
-                        var zipFilePath = Path.ChangeExtension(paths.ProvidePath(runtime, Phase.Zip), ".zip");
+                    var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
+                    var zipFilePath = Path.ChangeExtension(
+                        paths.ProvidePath(runtime, Phase.Zip),
+                        ".zip"
+                    );
 
-                        Log.Information($"Compressing output for {runtime.dotNetIdentifier}");
+                    Log.Information($"Compressing output for {runtime.dotNetIdentifier}");
 
-                        ZipFile.CreateFromDirectory(outputDirectory, zipFilePath);
-                        
-                        Log.Information($"Application compressed successfully into {zipFilePath}");
-            
-                    
+                    ZipFile.CreateFromDirectory(outputDirectory, zipFilePath);
+
+                    Log.Information($"Application compressed successfully into {zipFilePath}");
                 });
 
     Target Deploy =>
@@ -211,20 +188,19 @@ class Build : NukeBuild
             _.DependsOn(Compress)
                 .Executes(() =>
                 {
-                    
-
                     PrivateKeyFile keyFile = new(ENERGY_SECRET);
-                    AuthenticationMethod[] methods = [new PrivateKeyAuthenticationMethod(SshUsername, keyFile)];
+                    AuthenticationMethod[] methods =
+                    [
+                        new PrivateKeyAuthenticationMethod(SshUsername, keyFile)
+                    ];
                     ConnectionInfo connectionInfo = new(SshHost, SshPort, SshUsername, methods);
 
                     using (ISftpService sftpService = new SftpService(connectionInfo))
                     {
-                        Deployer deployer = new(sftpService, LocalDirectoryForDeploy, RemoteDirectory, paths);
+                        Deployer deployer =
+                            new(sftpService, LocalDirectoryForDeploy, RemoteDirectory);
 
                         deployer.Deploy(runtime);
                     }
-
-                   
-                  
                 });
 }
