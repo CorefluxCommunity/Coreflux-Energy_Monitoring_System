@@ -211,7 +211,7 @@ class Build : NukeBuild
 
                 
 
-                    PrivateKeyFile keyFile = new PrivateKeyFile(ENERGY_SECRET);
+                    PrivateKeyFile keyFile = new PrivateKeyFile(SshKey);
                     AuthenticationMethod[] methods = new AuthenticationMethod[] {new PrivateKeyAuthenticationMethod(SshUsername, keyFile)};
                     ConnectionInfo connectionInfo = new ConnectionInfo(SshHost, SshPort, SshUsername, methods);
 
