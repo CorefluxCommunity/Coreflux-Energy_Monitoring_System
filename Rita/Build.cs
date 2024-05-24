@@ -26,6 +26,7 @@ using Cloud.Services;
 using Cloud.Interfaces;
 using Renci.SshNet;
 using Cloud.Deployment;
+using System.Text;
 
 [GitHubActions(
     "continuous",
@@ -208,12 +209,16 @@ class Build : NukeBuild
             _.DependsOn(Compress)
                 .Executes(() =>
                 {
-                    
-                    string tempSshKeyPath = Path.GetTempFileName();
-                    File.WriteAllText(tempSshKeyPath, SshKey);
+
+
+                    PrivateKeyFile keyFile;
+                    using (MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(SshKey)))
+                    {
+                        keyFile = new PrivateKeyFile(stream);
+                    }
                 
 
-                    PrivateKeyFile keyFile = new PrivateKeyFile(tempSshKeyPath);
+                    
                     AuthenticationMethod[] methods = new AuthenticationMethod[] {new PrivateKeyAuthenticationMethod(SshUsername, keyFile)};
                     ConnectionInfo connectionInfo = new ConnectionInfo(SshHost, SshPort, SshUsername, methods);
 
@@ -224,7 +229,7 @@ class Build : NukeBuild
                         deployer.Deploy(runtime);
                     }
 
-                    File.Delete(tempSshKeyPath);
+                    
                   
                 });
 }
