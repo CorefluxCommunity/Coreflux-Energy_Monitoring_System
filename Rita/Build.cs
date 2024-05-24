@@ -73,8 +73,10 @@ class Build : NukeBuild
         _ =>
             _.Executes(() =>
             {
+                string formattedPrivateKey = ENERGY_SECRET.Replace("\n", Environment.NewLine);
+
                 // Convert the string to a byte array
-                byte[] byteArray = Encoding.UTF8.GetBytes(ENERGY_SECRET);
+                byte[] byteArray = Encoding.UTF8.GetBytes(formattedPrivateKey);
 
                 // Create a MemoryStream from the byte array
                 using (MemoryStream stream = new MemoryStream(byteArray))
