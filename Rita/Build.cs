@@ -95,9 +95,9 @@ class Build : NukeBuild
                             sftpClient.ChangeDirectory(RemoteDirectory);
                             Log.Information(sftpClient.IsConnected.ToString());
                             
-                            using (FileStream fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read))
+                            using (FileStream fileStream = new FileStream(LocalDirectoryForDeploy, FileMode.Open, FileAccess.Read))
                             {
-                                sftpClient.UploadFile(fileStream, Path.GetFileName(localFilePath));
+                                sftpClient.UploadFile(fileStream, Path.GetFileName(LocalDirectoryForDeploy));
                             }
 
                             sftpClient.Disconnect();
