@@ -77,6 +77,7 @@ class Build : NukeBuild
 
                 SftpClient sftpClient = new SftpClient("209.38.44.94", "root", ENERGY_SECRET);
                 sftpClient.Connect();
+                Log.Information(sftpClient.IsConnected.ToString());
 
 
 
