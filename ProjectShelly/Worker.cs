@@ -18,7 +18,7 @@ public sealed class Worker : BackgroundService
         LoadConfiguration("config.toml");
         MQTTController.OnConnect += onMqttConnect; //connect to Topic
         MQTTController.NewPayload += onMqttNewPayload; // Receiving new info
-        MQTTController.StartAsync("iot.coreflux.cloud", 1883).Wait();
+        MQTTController.StartAsync("209.38.44.94+", 1883).Wait();
     }
 
     /// <summary>
