@@ -17,4 +17,6 @@ public class Room
 	{
 		Devices = new List<Device>();
 	}
+
+	public long UnixTimestamp;
 }

@@ -18,7 +18,7 @@ public sealed class Worker : BackgroundService
         LoadConfiguration("config.toml");
         MQTTController.OnConnect += onMqttConnect; //connect to Topic
         MQTTController.NewPayload += onMqttNewPayload; // Receiving new info
-        MQTTController.StartAsync("209.38.44.94+", 1883).Wait();
+        MQTTController.StartAsync("209.38.44.94", 1883).Wait();
     }
 
     /// <summary>
@@ -213,25 +213,41 @@ public sealed class Worker : BackgroundService
         {
             _logger.LogInformation($"Worker running at: {DateTimeOffset.Now}");
             await Task.Delay(10_000, stoppingToken);
+            string jsonString = "";
             foreach (var office in MyCompany.Offices)
             {
                 foreach (var room in office.Rooms)
                 {
                     foreach (var device in room.Devices!)
                     {
-                        await MQTTController.SetDataAsync(device.Topic, device.TotalEnergyConsumed.ToString());
+                        device.UnixTimestamp = CalculateUnixTime();
+                        jsonString = JsonConvert.SerializeObject(device);
+                        await MQTTController.SetDataAsync(device.Topic, jsonString);
                         if(device.Messages != null)
                             device.Messages.Clear();
                         Console.WriteLine($"\nDevice {device.Name} Energy: {device.TotalEnergyConsumed:F3}");
                     }
-                    await MQTTController.SetDataAsync(room.Topic, room.TotalEnergy.ToString());
+                    room.UnixTimestamp = CalculateUnixTime();
+                    jsonString = JsonConvert.SerializeObject(room);
+                    await MQTTController.SetDataAsync(room.Topic, jsonString);
                     Console.WriteLine($"\n Room {room.Name} Energy: {room.TotalEnergy:F3}");
                 }
-                await MQTTController.SetDataAsync(office.Topic, office.TotalEnergy.ToString());
+                office.UnixTimestamp = CalculateUnixTime();
+                jsonString = JsonConvert.SerializeObject(office);
+                await MQTTController.SetDataAsync(office.Topic, jsonString);
                 Console.WriteLine($"\n  Office {office.Name} Energy: {office.TotalEnergy:F3}");
             }
-            await MQTTController.SetDataAsync(MyCompany.Topic, MyCompany.TotalEnergy.ToString());
+            MyCompany.UnixTimestamp = CalculateUnixTime();
+            jsonString = JsonConvert.SerializeObject(MyCompany);
+            await MQTTController.SetDataAsync(MyCompany.Topic, jsonString);
             Console.WriteLine($"\n   Company {MyCompany.Name} Energy: {MyCompany.TotalEnergy:F3}");
         }
+    }
+
+    public long CalculateUnixTime()
+    {
+        DateTimeOffset currentTime = DateTimeOffset.UtcNow;
+        long UnixTimestamp = currentTime.ToUnixTimeSeconds();
+        return UnixTimestamp;
     }
 }
