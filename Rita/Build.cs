@@ -91,6 +91,8 @@ class Build : NukeBuild
                         {
                             // Connect to the SFTP server
                             sftpClient.Connect();
+                            sftpClient.UploadFile(stream, RemoteDirectory);
+                            sftpClient.Disconnect();
 
                             // Log the connection status
                             Log.Information(sftpClient.IsConnected.ToString());

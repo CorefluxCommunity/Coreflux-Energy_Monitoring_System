@@ -44,6 +44,7 @@ namespace Cloud.Deployment
 
             Log.Information($"Deploying {zipFilePath} to {targetPath}");
 
+            
             _sftpService.Connect();
             _sftpService.UploadFile(zipFilePath, targetPath);
             _sftpService.Disconnect();
