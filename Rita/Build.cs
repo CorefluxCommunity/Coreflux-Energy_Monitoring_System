@@ -36,7 +36,7 @@ using static Nuke.Common.IO.PathConstruction;
 )]
 class Build : NukeBuild
 {
-    public static int Main() => Execute<Build>(x => x.Init, x => x.Deploy);
+    public static int Main() => Execute<Build>(x => x.Init, x => x.TestThis);
 
     [Solution]
     readonly Solution Solution;
@@ -49,10 +49,8 @@ class Build : NukeBuild
     [Parameter("SSH Username")]
     readonly string SshUsername = "root";
 
-    [Parameter("SSH Host")]
     readonly string SshHost = "209.38.44.94";
 
-    [Parameter("SSH Port")]
     readonly int SshPort = 22;
 
     [Parameter]
@@ -60,7 +58,7 @@ class Build : NukeBuild
     private readonly string ENERGY_SECRET;
 
     [Parameter("Remote Directory")]
-    readonly string RemoteDirectory = "/root/aggregator";
+    readonly string RemoteDirectory = "/root/aggregator/nothing.txt";
     RuntimeConfig runtimeConfig = new RuntimeConfig();
 
     Runtime runtime => runtimeConfig.Runtime;
@@ -70,6 +68,20 @@ class Build : NukeBuild
         Phase.Zip
     );
 
+
+    Target TestThis =>
+        _ =>
+            _.Executes(() =>
+            {
+
+
+                SftpClient sftpClient = new SftpClient("209.38.44.94", "root", ENERGY_SECRET);
+                sftpClient.Connect();
+
+                sftpClient.ReadAllText(RemoteDirectory);
+
+
+            });
     Target Init =>
         _ =>
             _.Before(Clean)
@@ -197,8 +209,7 @@ class Build : NukeBuild
 
                     using (ISftpService sftpService = new SftpService(connectionInfo))
                     {
-                        Deployer deployer =
-                            new(sftpService, LocalDirectoryForDeploy, RemoteDirectory);
+                        Deployer deployer = new(sftpService, LocalDirectoryForDeploy, RemoteDirectory);
 
                         deployer.Deploy(runtime);
                     }
