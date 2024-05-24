@@ -33,7 +33,7 @@ using Renci.SshNet.Security;
     "continuous",
     GitHubActionsImage.UbuntuLatest,
     On = [GitHubActionsTrigger.Push],
-    InvokedTargets = [nameof(Deploy)],
+    
     ImportSecrets = [nameof(ENERGY_SECRET)],
     AutoGenerate = false
     )]
@@ -65,8 +65,7 @@ class Build : NukeBuild
     [Parameter("SSH Port")]
     readonly int SshPort = 22;
 
-     [Parameter] [Secret]
-    private readonly string ENERGY_SECRET;
+     [Parameter] [Secret] private readonly string ENERGY_SECRET;
 
     [Parameter("Remote Directory")]
     readonly string RemoteDirectory = "/root/aggregator";
@@ -86,12 +85,12 @@ class Build : NukeBuild
                 .Executes(() =>
                 {
                  
-                IDirectoryManager directoryManager = new DirectoryManager();
+                DirectoryManager directoryManager = new();
                 AbsolutePathList paths = PathServiceProvider.paths;
             
                 foreach (Phase phase in Enum.GetValues(typeof(Phase)))
                     {
-                        ManagedPaths managedPath = paths[(Phase)phase];
+                        ManagedPaths managedPath = paths[phase];
                         directoryManager.EnsureDirectory(managedPath.Path, managedPath.Rule);
                     }
                 
