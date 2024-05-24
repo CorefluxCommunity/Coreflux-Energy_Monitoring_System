@@ -66,7 +66,7 @@ class Build : NukeBuild
     readonly int SshPort = 22;
 
      [Parameter] [Secret]
-    private readonly Key ENERGY_SECRET;
+    private readonly string ENERGY_SECRET;
 
     [Parameter("Remote Directory")]
     readonly string RemoteDirectory = "/root/aggregator";
@@ -214,13 +214,13 @@ class Build : NukeBuild
                 {
                     
 
-                    PrivateKeyFile keyFile = new PrivateKeyFile(ENERGY_SECRET);
-                    AuthenticationMethod[] methods = new AuthenticationMethod[] {new PrivateKeyAuthenticationMethod(SshUsername, keyFile)};
-                    ConnectionInfo connectionInfo = new ConnectionInfo(SshHost, SshPort, SshUsername, methods);
+                    PrivateKeyFile keyFile = new(ENERGY_SECRET);
+                    AuthenticationMethod[] methods = [new PrivateKeyAuthenticationMethod(SshUsername, keyFile)];
+                    ConnectionInfo connectionInfo = new(SshHost, SshPort, SshUsername, methods);
 
                     using (ISftpService sftpService = new SftpService(connectionInfo))
                     {
-                        IDeployer deployer = new Deployer(sftpService, LocalDirectoryForDeploy, RemoteDirectory, paths);
+                        Deployer deployer = new(sftpService, LocalDirectoryForDeploy, RemoteDirectory, paths);
 
                         deployer.Deploy(runtime);
                     }
