@@ -68,7 +68,9 @@ class Build : NukeBuild
         Phase.Zip
     );
 
-    string localFilePath = Path.Combine("artifacts", "compressed");
+    string localFilePath = Path.Combine(RootDirectory, "ProjectShelly.sln");
+
+    
 
     Target TestThis =>
         _ =>
@@ -98,7 +100,7 @@ class Build : NukeBuild
                             using (FileStream fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read))
                             {   
                                 string fileToRemote = Path.GetFileName(localFilePath);
-                                sftpClient.UploadFile(fileStream, fileToRemote + "linux-x64.zip");
+                                sftpClient.UploadFile(fileStream, fileToRemote);
                             }
 
                             sftpClient.Disconnect();
