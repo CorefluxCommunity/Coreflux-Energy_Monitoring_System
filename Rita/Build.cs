@@ -74,8 +74,8 @@ class Build : NukeBuild
             _.Executes(() =>
             {
 
-
-                SftpClient sftpClient = new SftpClient("209.38.44.94", "root", ENERGY_SECRET);
+                PrivateKeyFile  key = new(ENERGY_SECRET);
+                SftpClient sftpClient = new SftpClient("209.38.44.94", "root", key);
                 sftpClient.Connect();
                 Log.Information(sftpClient.IsConnected.ToString());
 
