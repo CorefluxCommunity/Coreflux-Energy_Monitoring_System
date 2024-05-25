@@ -36,7 +36,7 @@ using static Nuke.Common.IO.PathConstruction;
 )]
 class Build : NukeBuild
 {
-    public static int Main() => Execute<Build>(x => x.TestThis);
+    public static int Main() => Execute<Build>(x => x.Deploy);
 
     [Solution]
     readonly Solution Solution;
@@ -58,7 +58,7 @@ class Build : NukeBuild
     private readonly string ENERGY_SECRET;
 
     [Parameter("Remote Directory")]
-    readonly string RemoteDirectory = "/root/aggregator/";
+    readonly string RemoteDirectory = "/root/aggregator";
     RuntimeConfig runtimeConfig = new RuntimeConfig();
 
     Runtime runtime => runtimeConfig.Runtime;
@@ -76,45 +76,7 @@ class Build : NukeBuild
         _ =>
             _.Executes(() =>
             {
-                string formattedPrivateKey = ENERGY_SECRET.Replace("\n", Environment.NewLine);
-
-                // Convert the string to a byte array
-                byte[] byteArray = Encoding.UTF8.GetBytes(formattedPrivateKey);
-
-                // Create a MemoryStream from the byte array
-                using (MemoryStream stream = new MemoryStream(byteArray))
-                {
-                    try
-                    {
-                        // Create the PrivateKeyFile instance using the stream
-                        PrivateKeyFile key = new PrivateKeyFile(stream);
-
-                        // Use the PrivateKeyFile instance to create the SftpClient
-                        using (SftpClient sftpClient = new SftpClient("209.38.44.94", "root", key))
-                        {
-                            // Connect to the SFTP server
-                            sftpClient.Connect();
-                            sftpClient.ChangeDirectory(RemoteDirectory);
-                            Log.Information(sftpClient.IsConnected.ToString());
-                            
-                            using (FileStream fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read))
-                            {   
-                                string fileToRemote = Path.GetFileName(localFilePath);
-                                sftpClient.UploadFile(fileStream, fileToRemote);
-                            }
-
-                            sftpClient.Disconnect();
-
-                            // Log the connection status
-                            
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error("Failed to connect to SFTP server: " + ex.Message);
-                    }
-
-                }
+               
 
             });
     Target Init =>
@@ -235,18 +197,43 @@ class Build : NukeBuild
             _.DependsOn(Compress)
                 .Executes(() =>
                 {
-                    PrivateKeyFile keyFile = new(ENERGY_SECRET);
-                    AuthenticationMethod[] methods =
-                    [
-                        new PrivateKeyAuthenticationMethod(SshUsername, keyFile)
-                    ];
-                    ConnectionInfo connectionInfo = new(SshHost, SshPort, SshUsername, methods);
+                    string formattedPrivateKey = ENERGY_SECRET.Replace("\n", Environment.NewLine);
 
-                    using (ISftpService sftpService = new SftpService(connectionInfo))
+                // Convert the string to a byte array
+                byte[] byteArray = Encoding.UTF8.GetBytes(formattedPrivateKey);
+
+                // Create a MemoryStream from the byte array
+                using (MemoryStream stream = new MemoryStream(byteArray))
+                {
+                    try
                     {
-                        Deployer deployer = new(sftpService, LocalDirectoryForDeploy, RemoteDirectory);
+                        // Create the PrivateKeyFile instance using the stream
+                        PrivateKeyFile key = new PrivateKeyFile(stream);
 
-                        deployer.Deploy(runtime);
+                        // Use the PrivateKeyFile instance to create the SftpClient
+                        using (SftpClient sftpClient = new SftpClient(SshHost, SshUsername, key))
+                        {
+                            // Connect to the SFTP server
+                            sftpClient.Connect();
+                            sftpClient.ChangeDirectory(RemoteDirectory);
+                            Log.Information(sftpClient.IsConnected.ToString());
+                            
+                            using (FileStream fileStream = new FileStream(LocalDirectoryForDeploy, FileMode.Open, FileAccess.Read))
+                            {   
+                                string fileToRemote = Path.GetFileName(LocalDirectoryForDeploy);
+                                sftpClient.UploadFile(fileStream, fileToRemote);
+                            }
+
+                            sftpClient.Disconnect();
+
+                            
+                        }
                     }
+                    catch (Exception ex)
+                    {
+                        Log.Error("Failed to connect to SFTP server: " + ex.Message);
+                    }
+
+                }
                 });
 }
