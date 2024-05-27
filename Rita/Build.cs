@@ -67,6 +67,8 @@ class Build : NukeBuild
     readonly AbsolutePath LocalDirectoryForDeploy = Path.Combine(PathServiceProvider.paths.GetPathForPhase(
         Phase.Zip), "linux-x64.zip");
 
+        
+
     private ISftpService _sftpService;
 
 
@@ -232,17 +234,8 @@ class Build : NukeBuild
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                   _sftpService.ExecuteCommand($"cd {RemoteDirectory} && nohup ./ShellyApp > output.log 2>&1 &");
-                   var (result, error, exitStatus) = _sftpService.ExecuteCommand($"pgrep -f ShellyApp");
-
-                   if (exitStatus == 0)
-                   {
-                    Log.Information($"Successfully executed ShellyApp: \n{result}");
-                   }
-                   else
-                   {
-                    Log.Information($"Failed to Execute the APP. {error}");
-                   }
+                    string remoteZipFilePath = $"{RemoteDirectory}/{Path.GetFileName(LocalDirectoryForDeploy)}";
+                    _sftpService.ExecuteCommand($"./ShellyApp");
 
                     _sftpService.Disconnect();
                 });
