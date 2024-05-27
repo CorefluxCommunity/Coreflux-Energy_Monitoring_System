@@ -11,42 +11,79 @@ using Serilog;
 
 namespace Cloud.Deployment
 {
-      public class sftpService
+      public class SftpService : ISftpService
       {
         private readonly IPrivateKeyProvider _privateKeyProvider;
         private readonly ISftpClientFactory _sftpClientFactory;
-
-        public sftpService(IPrivateKeyProvider privateKeyProvider, ISftpClientFactory sftpClientFactory)
-        {
-            _privateKeyProvider = privateKeyProvider;
-            _sftpClientFactory = sftpClientFactory;
-        }
-
-        public void UploadFileToSftp(string privateKeyString, string host, string username, string remoteDirectory, string localFilePath)
-        {
-            try
+        private SftpClient _sftpClient;
+        private readonly string _sshHost;
+        private readonly string _sshUsername;
+     
+            public SftpService(ISftpClientFactory sftpClientFactory, string sshHost, string sshUsername)
             {
-                PrivateKeyFile key = _privateKeyProvider.GetPrivateKey(privateKeyString);
+                
+                _sftpClientFactory = sftpClientFactory;
+                _sshHost = sshHost;
+                _sshUsername = sshUsername;
 
-                using (SftpClient sftpClient = _sftpClientFactory.CreateSftpClient(host, username, key))
+            }
+
+            public void Connect(PrivateKeyFile privateKeyFile)
+            {
+                _sftpClient = _sftpClientFactory.CreateSftpClient(_sshHost, _sshUsername, privateKeyFile);
+
+                _sftpClient.Connect();
+
+                if(_sftpClient.IsConnected)
                 {
-                    sftpClient.Connect();
-                    sftpClient.ChangeDirectory(remoteDirectory);
-                    Log.Information(sftpClient.IsConnected.ToString());
-
-                    using (FileStream fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.ReadWrite))
-                    {
-                        string fileToRemote = Path.GetFileName(localFilePath);
-                        sftpClient.UploadFile(fileStream, fileToRemote);
-                    }
-
-                    sftpClient.Disconnect();
+                    Log.Information("SFTP Client connected successfully.");
+                }
+                else
+                {
+                    throw new Exception("Failed to connect to the SFTP server.");
                 }
             }
-            catch (Exception ex)
+
+            public void UploadFile(string LocalDirectoryForDeploy, string remoteDirectory)
             {
-                Log.Error($"Failed to connect to SFTP Server: {ex.Message}");
+                if(_sftpClient == null || !_sftpClient.IsConnected)
+                {
+                    throw new InvalidOperationException("SFTP client is not connected...");
+                }
+
+                _sftpClient.ChangeDirectory(remoteDirectory);
+                Log.Information($"Connected to remote directory: {_sftpClient.WorkingDirectory}");
+
+                using (FileStream fileStream = new FileStream(LocalDirectoryForDeploy, FileMode.Open, FileAccess.ReadWrite))
+                {
+                string fileToRemote = Path.GetFileName(LocalDirectoryForDeploy);
+                    _sftpClient.UploadFile(fileStream, fileToRemote);
+
+                    if (_sftpClient.Exists(fileToRemote))
+                    {
+                        Log.Information($"File '{fileToRemote}' was uploaded successfully to '{_sftpClient.WorkingDirectory}/{fileToRemote}'");
+                    }
+                    else
+                    {
+                        Log.Error($"File '{fileToRemote}' was not uploaded successfully.");
+                    }
+
+                }
+            }
+
+            public void Disconnect()
+            {
+                _sftpClient.Disconnect();
+                Log.Information("SFTP Client disconnected.");
+            }
+
+            public bool IsConnected => _sftpClient != null && _sftpClient.IsConnected;
+
+            public string WorkingDirectory => _sftpClient?.WorkingDirectory;
+
+            public void Dispose()
+            {
+                _sftpClient?.Dispose();
             }
         }
-      }
 }

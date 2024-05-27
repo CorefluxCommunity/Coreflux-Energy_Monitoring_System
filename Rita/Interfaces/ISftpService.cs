@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Renci.SshNet;
 using Renci.SshNet.Sftp;
 
 
@@ -7,10 +8,11 @@ namespace Cloud.Interfaces
 {
     public interface ISftpService : IDisposable
     {
-        void Connect();
-        void Disconnect();
+        void Connect(PrivateKeyFile privateKeyFile);
         void UploadFile(string localFilePath, string remoteFilePath);
-        IEnumerable<ISftpFile> ListDirectory(string remoteDirectory);
+        void Disconnect();
+        bool IsConnected {get;}
+        string WorkingDirectory {get;}
     }
 
 }

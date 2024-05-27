@@ -10,6 +10,11 @@ namespace Cloud.Models
     {
         public PrivateKeyFile GetPrivateKey(string privateKeyString)
         {
+            if (string.IsNullOrEmpty(privateKeyString))
+            {
+                throw new ArgumentNullException(nameof(privateKeyString), "The private key string cannot be null or empty.");
+            }
+            
             string formattedPrivateKey = privateKeyString.Replace("\n", Environment.NewLine);
             byte[] byteArray = Encoding.UTF8.GetBytes(formattedPrivateKey);
             using (MemoryStream stream = new MemoryStream(byteArray))

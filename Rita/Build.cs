@@ -69,7 +69,8 @@ class Build : NukeBuild
 
     string localFilePath = Path.Combine(RootDirectory, "ProjectShelly.sln");
 
-    private SftpClient _sftpClient;
+    private ISftpClient _sftpClient;
+    private ISftpService _sftpService;
 
 
 
@@ -164,7 +165,7 @@ class Build : NukeBuild
                         IFileDeletionService fileDeletionService = new FileDeletionService();
                         fileDeletionService.DeleteFiles(outputDirectory, "ShellyApp.pdb", "appsettings.Development.json", "appsettings.json");
 
-                        
+                        Log.Information("Unecessary files deleted successfully.");
 
                     
                     }
@@ -201,19 +202,11 @@ class Build : NukeBuild
                  
                     IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
                     ISftpClientFactory sftpClientFactory = new SftpClientFactory();
-                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
-                    _sftpClient = sftpClientFactory.CreateSftpClient(SshHost, SshUsername, key);
+                    
+                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(Environment.GetEnvironmentVariable(ENERGY_SECRET));
+                    _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
 
-                    _sftpClient.Connect();
-                    if (_sftpClient.IsConnected)
-                    {
-                        Log.Information("SFTP Client connected successfully.");
-                        
-                    }
-                    else
-                    {
-                        throw new Exception("Failed to connect to the SFTP server.");
-                    }
+                    _sftpService.Connect(key);
                 });
 
     Target Deploy =>
@@ -227,24 +220,7 @@ class Build : NukeBuild
                         throw new InvalidOperationException("SFTP Client is not connected.");
                     }
 
-                    _sftpClient.ChangeDirectory(RemoteDirectory);
-                    Log.Information($"Connected to {_sftpClient.WorkingDirectory}");
-
-                    using (FileStream fileStream = new FileStream(LocalDirectoryForDeploy, FileMode.Open, FileAccess.Read))
-                    {
-                        string fileToRemote = Path.GetFileName(LocalDirectoryForDeploy);
-                        _sftpClient.UploadFile(fileStream, fileToRemote);
-
-                        if (_sftpClient.Exists(fileToRemote))
-                        {
-                            Log.Information($"File '{fileToRemote}' was uploaded successfully to '{_sftpClient.WorkingDirectory}/{fileToRemote}'");
-                        }
-                        else
-                        {
-                            Log.Error($"File '{fileToRemote}' was not uploaded successfully");
-                        }
-
-                    }
+                   _sftpService.UploadFile(LocalDirectoryForDeploy, RemoteDirectory);
 
                     _sftpClient.Disconnect();
                     Log.Information("SFTP Client Disconnected");
