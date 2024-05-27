@@ -15,7 +15,7 @@ namespace Cloud.Models
     public class RuntimeConfig
     {
 
-        public Runtime Runtime { get; }
+        public Runtime Runtime { get; set; }
                      
             public RuntimeConfig()
             {

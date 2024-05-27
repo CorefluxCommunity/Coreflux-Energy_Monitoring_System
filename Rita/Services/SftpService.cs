@@ -6,47 +6,47 @@ using Renci.SshNet.Sftp;
 using Cloud.Interfaces;
 using Octokit;
 using FileMode = System.IO.FileMode;
+using Cloud.Models;
+using Serilog;
 
 namespace Cloud.Deployment
 {
-        public class SftpService : ISftpService, IDisposable
-    {
-        private readonly ConnectionInfo _connectionInfo;
+      public class sftpService
+      {
+        private readonly IPrivateKeyProvider _privateKeyProvider;
+        private readonly ISftpClientFactory _sftpClientFactory;
 
-        private SftpClient _client;
-
-        public SftpService(ConnectionInfo connectionInfo)
+        public sftpService(IPrivateKeyProvider privateKeyProvider, ISftpClientFactory sftpClientFactory)
         {
-            _connectionInfo = connectionInfo;
+            _privateKeyProvider = privateKeyProvider;
+            _sftpClientFactory = sftpClientFactory;
         }
 
-        public void Connect()
+        public void UploadFileToSftp(string privateKeyString, string host, string username, string remoteDirectory, string localFilePath)
         {
-            _client = new SftpClient(_connectionInfo);
-            _client.Connect();
-        }
-
-        public void Disconnect()
-        {
-            _client.Disconnect();
-            _client.Dispose();
-
-        }
-
-        public void UploadFile(string localFilePath, string remoteFilePath)
-        {
-            using (FileStream fs = new FileStream(localFilePath, FileMode.Open))
+            try
             {
-                _client.UploadFile(fs, remoteFilePath);
+                PrivateKeyFile key = _privateKeyProvider.GetPrivateKey(privateKeyString);
+
+                using (SftpClient sftpClient = _sftpClientFactory.CreateSftpClient(host, username, key))
+                {
+                    sftpClient.Connect();
+                    sftpClient.ChangeDirectory(remoteDirectory);
+                    Log.Information(sftpClient.IsConnected.ToString());
+
+                    using (FileStream fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.ReadWrite))
+                    {
+                        string fileToRemote = Path.GetFileName(localFilePath);
+                        sftpClient.UploadFile(fileStream, fileToRemote);
+                    }
+
+                    sftpClient.Disconnect();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Failed to connect to SFTP Server: {ex.Message}");
             }
         }
-
-        
-        public IEnumerable<ISftpFile> ListDirectory(string remoteDirectory)
-        {
-            return _client.ListDirectory(remoteDirectory);
-        }
-
-        public void Dispose() => _client?.Dispose();
-    }
+      }
 }
