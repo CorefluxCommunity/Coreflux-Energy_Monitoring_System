@@ -203,7 +203,7 @@ class Build : NukeBuild
                     IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
                     ISftpClientFactory sftpClientFactory = new SftpClientFactory();
                     
-                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(Environment.GetEnvironmentVariable(ENERGY_SECRET));
+                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
                     _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
 
                     _sftpService.Connect(key);
