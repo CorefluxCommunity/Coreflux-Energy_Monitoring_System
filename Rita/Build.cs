@@ -213,11 +213,7 @@ class Build : NukeBuild
             _.DependsOn(ConnectSFTP)
                 .Executes(() =>
                 {
-
                    _sftpService.UploadFile(LocalDirectoryForDeploy, RemoteDirectory);
-
-                    
-                    
 
                 });
 
@@ -225,8 +221,9 @@ class Build : NukeBuild
         _ =>
             _.DependsOn(Deploy)
                 .Executes(() => 
-                {
-                    _sftpService.ExecuteCommand($"unzip -o {RemoteDirectory}/linux-x64.zip");
+                {   
+                    string remoteZipFilePath = $"{RemoteDirectory}/{Path.GetFileName(LocalDirectoryForDeploy)}";
+                    _sftpService.ExecuteCommand($"unzip -o {remoteZipFilePath} -d {RemoteDirectory}");
                 });
 
 
@@ -235,8 +232,8 @@ class Build : NukeBuild
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    _sftpService.ExecuteCommand($"./ShellyApp");
+                    _sftpService.ExecuteCommand($"cd {RemoteDirectory} && ./ShellyApp");
 
-                    _sftpService.Disconnect();
+                    // _sftpService.Disconnect();
                 });
 }
