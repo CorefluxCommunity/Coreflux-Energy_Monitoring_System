@@ -86,7 +86,7 @@ class Build : NukeBuild
                         ManagedPaths managedPath = paths[phase];
                         directoryManager.EnsureDirectory(managedPath.Path, managedPath.Rule);
 
-                        Log.Information($"Ensuring directory {paths} existence...");
+                        Log.Information($"Ensuring directory {managedPath.Path} existence...");
                     }
                 });
 
