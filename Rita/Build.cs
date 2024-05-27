@@ -54,6 +54,7 @@ class Build : NukeBuild
 
     readonly int SshPort = 22;
 
+    [Parameter] [Secret]
     private readonly string ENERGY_SECRET;
 
 
@@ -163,7 +164,7 @@ class Build : NukeBuild
                         IFileDeletionService fileDeletionService = new FileDeletionService();
                         fileDeletionService.DeleteFiles(outputDirectory, "ShellyApp.pdb", "appsettings.Development.json", "appsettings.json");
 
-                         Log.Information("Unnecessary files deleted successfully.");
+                        
 
                     
                     }
