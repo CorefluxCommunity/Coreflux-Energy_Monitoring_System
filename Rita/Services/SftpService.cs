@@ -13,7 +13,7 @@ namespace Cloud.Deployment
 {
       public class SftpService : ISftpService
       {
-        private readonly IPrivateKeyProvider _privateKeyProvider;
+        
         private readonly ISftpClientFactory _sftpClientFactory;
         private SftpClient _sftpClient;
         private SshClient _sshClient;
@@ -75,7 +75,7 @@ namespace Cloud.Deployment
                 }
             }
 
-            public (string Result, string Error, int ExitStatus) ExecuteCommand(string command)
+            public void ExecuteCommand(string command)
             {
                 if(_sshClient == null || !_sshClient.IsConnected)
                 {
@@ -85,13 +85,7 @@ namespace Cloud.Deployment
                 using (SshCommand cmd = _sshClient.CreateCommand(command))
                 {
                     string result = cmd.Execute();
-                    string error = cmd.Error;
-                    int exitStatus = cmd.ExitStatus;
-
-                    Log.Information($"Command executed with result: {result}");
-
-
-                    return (result, error, exitStatus);
+                  
                     
                 }
             }

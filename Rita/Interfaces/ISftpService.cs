@@ -10,7 +10,7 @@ namespace Cloud.Interfaces
     {
         void Connect(PrivateKeyFile privateKeyFile);
         void UploadFile(string localFilePath, string remoteFilePath);
-        (string Result, string Error, int ExitStatus) ExecuteCommand(string command);
+        void ExecuteCommand(string command);
         void Disconnect();
         bool IsConnected {get;}
         string WorkingDirectory {get;}
