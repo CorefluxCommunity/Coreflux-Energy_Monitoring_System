@@ -1,40 +1,44 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Collections.Generic;
 using System.Linq;
 using System.Security.Policy;
+using System.Text;
+using Cloud.Deployment;
+using Cloud.Interfaces;
+using Cloud.Models;
+using Cloud.Services;
 using Microsoft.Build.Framework;
 using Nuke.Common;
 using Nuke.Common.CI;
+using Nuke.Common.CI.GitHubActions;
 using Nuke.Common.Execution;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Tooling;
+using Nuke.Common.Tools;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Utilities.Collections;
+using Renci.SshNet;
+using Renci.SshNet.Security;
 using Serilog;
 using static Nuke.Common.EnvironmentInfo;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.IO.PathConstruction;
-using Nuke.Common.CI.GitHubActions;
+
+
 
 [GitHubActions(
     "continuous",
     GitHubActionsImage.UbuntuLatest,
     On = [GitHubActionsTrigger.Push],
-    InvokedTargets = [nameof(Deploy)],
     ImportSecrets = [nameof(ENERGY_SECRET)],
     AutoGenerate = false
-    )]
-
-
-
-
+)]
 class Build : NukeBuild
 {
-    
-    public static int Main() => Execute<Build>(x => x.Init, x => x.Deploy);
+    public static int Main() => Execute<Build>(x => x.Init, x => x.Execution);
 
     [Solution]
     readonly Solution Solution;
@@ -44,31 +48,45 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
-    readonly string ENERGY_SECRET;
-    RuntimeConfig runtimes = new RuntimeConfig();
-    AbsolutePathList paths;
+    readonly string SshUsername = "root";
 
-    Target Init =>
-        _ =>
-            _.Before(Clean)
+    readonly string SshHost = "209.38.44.94";
+
+    readonly int SshPort = 22;
+
+    [Parameter] [Secret]
+    private readonly string ENERGY_SECRET;
+
+
+    readonly string RemoteDirectory = "/root/aggregator/";
+    RuntimeConfig runtimeConfig = new RuntimeConfig();
+
+    Runtime runtime => runtimeConfig.Runtime;
+    readonly AbsolutePathList paths = PathServiceProvider.paths;
+
+    readonly AbsolutePath LocalDirectoryForDeploy = Path.Combine(PathServiceProvider.paths.GetPathForPhase(
+        Phase.Zip), "linux-x64.zip");
+
+        
+
+    private ISftpService _sftpService;
+
+
+
+    Target Init => _ => _
+                
+                .DependentFor(Clean)
                 .Executes(() =>
                 {
-                 
-                    paths = new AbsolutePathList(NukeBuild.RootDirectory);
+                    DirectoryManager directoryManager = new();
+                    AbsolutePathList paths = PathServiceProvider.paths;
 
-                   
-
-                    runtimes.Add(new Runtime("win-x64"));
-                    runtimes.Add(new Runtime("linux-x64"));
-                    runtimes.Add(new Runtime("linux-arm64"));
-                    runtimes.Add(new Runtime("linux-arm")); // 32-bit ARM
-                    runtimes.Add(new Runtime("osx-x64")); // Intel-based macOS
-                    runtimes.Add(new Runtime("osx-arm64")); // Apple Silicon macOS
-                    
-
-                    foreach (var managedPath in paths.Values)
+                    foreach (Phase phase in Enum.GetValues(typeof(Phase)))
                     {
-                        paths.EnsureDirectory(managedPath.Path, managedPath.Rule);
+                        ManagedPaths managedPath = paths[phase];
+                        directoryManager.EnsureDirectory(managedPath.Path, managedPath.Rule);
+
+                        Log.Information($"Ensuring directory {managedPath.Path} existence...");
                     }
                 });
 
@@ -123,18 +141,11 @@ class Build : NukeBuild
                 .Executes(() =>
                 {
                     try
-                    {   
-                        
+                    {
+                        var projectPath = paths.ProvidePath(runtime, Phase.Build);
+                        var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
 
-                        foreach (var runtime in runtimes)
-                        {
-                            var projectPath = paths.ProvidePath(runtime, Phase.Build);
-                            var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
-                            
-                            
-
-                            Log.Information($"Compiling the program for {runtime.dotNetIdentifier}...");
-
+                        Log.Information($"Compiling the program for {runtime.dotNetIdentifier}...");
 
                         DotNetTasks.DotNetPublish(s =>
                             s.SetProject(projectPath)
@@ -144,18 +155,20 @@ class Build : NukeBuild
                                 .SetRuntime(runtime.dotNetIdentifier)
                                 .SetConfiguration("Release")
                                 .EnablePublishSingleFile()
-                                .SetOutput(outputDirectory));
-                        
+                                .SetOutput(outputDirectory)
+                        );
 
-                        // File.Copy(sourceConfigFile, configFileDestination);
-                        
                         Log.Information(
                             "Compilation outputs are directed to: {0}",
                             outputDirectory
-                            
-                        
                         );
-                        }
+
+                        IFileDeletionService fileDeletionService = new FileDeletionService();
+                        fileDeletionService.DeleteFiles(outputDirectory, "ShellyApp.pdb", "appsettings.Development.json", "appsettings.json");
+
+                        Log.Information("Unecessary files deleted successfully.");
+
+                    
                     }
                     catch (Exception ex)
                     {
@@ -169,46 +182,61 @@ class Build : NukeBuild
             _.DependsOn(Compile)
                 .Executes(() =>
                 {
-                
-                   foreach (var runtime in runtimes)
-                   {
                     var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
-                    var zipFilePath = Path.ChangeExtension(paths.ProvidePath(runtime, Phase.Zip), ".zip");
+                    var zipFilePath = Path.ChangeExtension(
+                        paths.ProvidePath(runtime, Phase.Zip),
+                        ".zip"
+                    );
 
                     Log.Information($"Compressing output for {runtime.dotNetIdentifier}");
 
                     ZipFile.CreateFromDirectory(outputDirectory, zipFilePath);
-                    
+
                     Log.Information($"Application compressed successfully into {zipFilePath}");
-            
-                   }
                 });
 
-    Target Deploy =>
+    Target ConnectSFTP =>
         _ =>
             _.DependsOn(Compress)
                 .Executes(() =>
                 {
+                 
+                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
+                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
                     
-                    foreach (var runtime in runtimes)
-                    {
+                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
+                    _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
 
-                        var zipFilePath = Path.ChangeExtension(paths.ProvidePath(runtime, Phase.Zip), ".zip");
-                        var targetPath = Path.ChangeExtension(paths.ProvidePath(runtime, Phase.Deploy), ".zip");
+                    _sftpService.Connect(key);
+                });
 
-                        Log.Information($"Deploying {zipFilePath} to {targetPath}");
+    Target Deploy =>
+        _ =>
+            _.DependsOn(ConnectSFTP)
+                .Executes(() =>
+                {
+                   _sftpService.UploadFile(LocalDirectoryForDeploy, RemoteDirectory);
 
-                        CopyFile(zipFilePath, targetPath, FileExistsPolicy.Overwrite);
+                });
 
-                        if (File.Exists(zipFilePath))
-                        {
-                            Log.Information($"Application deployed successfully to {targetPath}");
+    Target Unzip =>
+        _ =>
+            _.DependsOn(Deploy)
+                .Executes(() => 
+                {   
+                    string remoteZipFilePath = $"{RemoteDirectory}/{Path.GetFileName(LocalDirectoryForDeploy)}";
+                    _sftpService.ExecuteCommand($"unzip -o {remoteZipFilePath} -d {RemoteDirectory}");
+                });
 
-                        }
-                        else 
-                        {
-                            Log.Error($"Failed to find compressed file: {zipFilePath}");
-                        }
-                    }
+
+    Target Execution =>
+        _ => 
+            _.DependsOn(Unzip)
+                .Executes(() =>
+                {
+                    
+                    _sftpService.ExecuteCommand($"./ShellyApp");
+
+                    
                 });
 }

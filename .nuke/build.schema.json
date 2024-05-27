@@ -20,7 +20,6 @@
         },
         "ENERGY_SECRET": {
           "type": "string",
-          "description": "API Key for NuGet",
           "default": "Secrets must be entered via 'nuke :secrets [profile]'"
         },
         "Help": {
@@ -67,6 +66,10 @@
             "type": "string"
           }
         },
+        "RemoteDirectory": {
+          "type": "string",
+          "description": "Remote Directory"
+        },
         "Root": {
           "type": "string",
           "description": "Root directory during build execution"
@@ -83,13 +86,18 @@
               "Deploy",
               "Init",
               "Restore",
-              "Test"
+              "Test",
+              "TestThis"
             ]
           }
         },
         "Solution": {
           "type": "string",
           "description": "Path to a solution file that is automatically loaded"
+        },
+        "SshUsername": {
+          "type": "string",
+          "description": "SSH Username"
         },
         "Target": {
           "type": "array",
@@ -103,7 +111,8 @@
               "Deploy",
               "Init",
               "Restore",
-              "Test"
+              "Test",
+              "TestThis"
             ]
           }
         },

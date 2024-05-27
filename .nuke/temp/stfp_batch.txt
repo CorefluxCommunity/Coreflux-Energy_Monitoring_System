@@ -1,0 +1,8 @@
+mkdir -p /root/aggregator
+cd /root/aggregator
+put C:\Code\Work\Coreflux-Energy_Monitoring_System\artifacts\compressed\linux-arm.zip
+put C:\Code\Work\Coreflux-Energy_Monitoring_System\artifacts\compressed\linux-arm64.zip
+put C:\Code\Work\Coreflux-Energy_Monitoring_System\artifacts\compressed\linux-x64.zip
+put C:\Code\Work\Coreflux-Energy_Monitoring_System\artifacts\compressed\osx-arm64.zip
+put C:\Code\Work\Coreflux-Energy_Monitoring_System\artifacts\compressed\osx-x64.zip
+put C:\Code\Work\Coreflux-Energy_Monitoring_System\artifacts\compressed\win-x64.zip
