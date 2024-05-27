@@ -217,7 +217,7 @@ class Build : NukeBuild
 
                    _sftpService.UploadFile(LocalDirectoryForDeploy, RemoteDirectory);
 
-                    _sftpClient.Disconnect();
+                    _sftpService.Disconnect();
                     Log.Information("SFTP Client Disconnected");
 
                 });
