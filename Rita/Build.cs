@@ -60,7 +60,7 @@ class Build : NukeBuild
     private readonly string ENERGY_SECRET;
 
     [Parameter("Remote Directory")]
-    readonly string RemoteDirectory = "/root/aggregator";
+    readonly string RemoteDirectory = "/root/aggregator/";
     RuntimeConfig runtimeConfig = new RuntimeConfig();
 
     Runtime runtime => runtimeConfig.Runtime;
@@ -233,6 +233,7 @@ class Build : NukeBuild
                     if (_sftpClient.IsConnected)
                     {
                         Log.Information("SFTP Client connected successfully.");
+                        _sftpClient.ChangeDirectory(RemoteDirectory);
                     }
                     else
                     {
@@ -246,9 +247,9 @@ class Build : NukeBuild
                 .Executes(() =>
                 {
 
-                    using (FileStream fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read))
+                    using (FileStream fileStream = new FileStream(LocalDirectoryForDeploy, FileMode.Open, FileAccess.Read))
                     {
-                        string fileToRemote = Path.GetFileName(localFilePath);
+                        string fileToRemote = Path.GetFileName(LocalDirectoryForDeploy);
                         _sftpClient.UploadFile(fileStream, fileToRemote);
                     }
 
