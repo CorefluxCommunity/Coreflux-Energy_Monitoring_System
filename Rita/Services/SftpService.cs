@@ -16,6 +16,7 @@ namespace Cloud.Deployment
         private readonly IPrivateKeyProvider _privateKeyProvider;
         private readonly ISftpClientFactory _sftpClientFactory;
         private SftpClient _sftpClient;
+        private SshClient _sshClient;
         private readonly string _sshHost;
         private readonly string _sshUsername;
      
@@ -34,13 +35,16 @@ namespace Cloud.Deployment
 
                 _sftpClient.Connect();
 
-                if(_sftpClient.IsConnected)
+                _sshClient = new SshClient(_sshHost, _sshUsername, privateKeyFile);
+                _sshClient.Connect();
+
+                if(_sftpClient.IsConnected && _sshClient.IsConnected)
                 {
-                    Log.Information("SFTP Client connected successfully.");
+                    Log.Information("SFTP and SSH Clients connected successfully.");
                 }
                 else
                 {
-                    throw new Exception("Failed to connect to the SFTP server.");
+                    throw new Exception("Failed to connect to the SFTP or SSH server.");
                 }
             }
 
@@ -71,13 +75,30 @@ namespace Cloud.Deployment
                 }
             }
 
+            public void ExecuteCommand(string command)
+            {
+                if(_sshClient == null || !_sshClient.IsConnected)
+                {
+                    throw new InvalidOperationException("SSH Client is not connected.");
+                }
+
+                using (SshCommand cmd = _sshClient.CreateCommand(command))
+                {
+                    string result = cmd.Execute();
+
+                    Log.Information($"Command executed with result: {result}");
+                    
+                }
+            }
+
             public void Disconnect()
             {
                 _sftpClient.Disconnect();
-                Log.Information("SFTP Client Disconnected.");
+                _sshClient.Disconnect();
+                Log.Information("SFTP and SSH Clients Disconnected.");
             }
 
-            public bool IsConnected => _sftpClient != null && _sftpClient.IsConnected;
+            public bool IsConnected => _sftpClient != null && _sftpClient.IsConnected && _sshClient != null && _sshClient.IsConnected;
 
             public string WorkingDirectory => _sftpClient?.WorkingDirectory;
 

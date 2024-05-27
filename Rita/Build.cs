@@ -38,7 +38,7 @@ using static Nuke.Common.IO.PathConstruction;
 )]
 class Build : NukeBuild
 {
-    public static int Main() => Execute<Build>(x => x.Init, x => x.Deploy);
+    public static int Main() => Execute<Build>(x => x.Init, x => x.Execution);
 
     [Solution]
     readonly Solution Solution;
@@ -67,16 +67,13 @@ class Build : NukeBuild
     readonly AbsolutePath LocalDirectoryForDeploy = Path.Combine(PathServiceProvider.paths.GetPathForPhase(
         Phase.Zip), "linux-x64.zip");
 
-    string localFilePath = Path.Combine(RootDirectory, "ProjectShelly.sln");
-
-    private ISftpClient _sftpClient;
     private ISftpService _sftpService;
 
 
 
-    Target Init =>
-        _ =>
-            _.Before(Clean)
+    Target Init => _ => _
+                
+                .DependentFor(Clean)
                 .Executes(() =>
                 {
                     DirectoryManager directoryManager = new();
@@ -86,6 +83,8 @@ class Build : NukeBuild
                     {
                         ManagedPaths managedPath = paths[phase];
                         directoryManager.EnsureDirectory(managedPath.Path, managedPath.Rule);
+
+                        Log.Information($"Ensuring directory {paths} existence...");
                     }
                 });
 
@@ -217,8 +216,27 @@ class Build : NukeBuild
 
                    _sftpService.UploadFile(LocalDirectoryForDeploy, RemoteDirectory);
 
-                    _sftpService.Disconnect();
+                    
                     
 
+                });
+
+    Target Unzip =>
+        _ =>
+            _.DependsOn(Deploy)
+                .Executes(() => 
+                {
+                    _sftpService.ExecuteCommand($"unzip -o {RemoteDirectory}/linux-x64.zip");
+                });
+
+
+    Target Execution =>
+        _ => 
+            _.DependsOn(Unzip)
+                .Executes(() =>
+                {
+                    _sftpService.ExecuteCommand($"./ShellyApp");
+
+                    _sftpService.Disconnect();
                 });
 }
