@@ -48,18 +48,15 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
-    [Parameter("SSH Username")]
     readonly string SshUsername = "root";
 
     readonly string SshHost = "209.38.44.94";
 
     readonly int SshPort = 22;
 
-    [Parameter]
-    [Secret]
     private readonly string ENERGY_SECRET;
 
-    [Parameter("Remote Directory")]
+
     readonly string RemoteDirectory = "/root/aggregator/";
     RuntimeConfig runtimeConfig = new RuntimeConfig();
 
@@ -162,6 +159,13 @@ class Build : NukeBuild
                             "Compilation outputs are directed to: {0}",
                             outputDirectory
                         );
+
+                        IFileDeletionService fileDeletionService = new FileDeletionService();
+                        fileDeletionService.DeleteFiles(outputDirectory, "ShellyApp.pdb", "appsettings.Development.json", "appsettings.json");
+
+                         Log.Information("Unnecessary files deleted successfully.");
+
+                    
                     }
                     catch (Exception ex)
                     {
@@ -193,37 +197,7 @@ class Build : NukeBuild
             _.DependsOn(Compress)
                 .Executes(() =>
                 {
-                    //     string formattedPrivateKey = ENERGY_SECRET.Replace("\n", Environment.NewLine);
-
-                    // // Convert the string to a byte array
-                    //     byte[] byteArray = Encoding.UTF8.GetBytes(formattedPrivateKey);
-
-                    // // Create a MemoryStream from the byte array
-                    //     using (MemoryStream stream = new MemoryStream(byteArray))
-                    //     {
-                    //         try
-                    //         {
-                    //         // Create the PrivateKeyFile instance using the stream
-                    //             PrivateKeyFile key = new PrivateKeyFile(stream);
-
-                    //         // Use the PrivateKeyFile instance to create the SftpClient
-                    //             using (SftpClient sftpClient = new SftpClient(SshHost, SshUsername, key))
-                    //             {
-                    //             // Connect to the SFTP server
-                    //                 sftpClient.Connect();
-                    //                 sftpClient.ChangeDirectory(RemoteDirectory);
-                    //                 Log.Information(sftpClient.IsConnected.ToString());
-
-
-
-
-                    //             }
-                    //         }
-                    //         catch (Exception ex)
-                    //         {
-                    //             Log.Error("Failed to connect to SFTP server: " + ex.Message);
-                    //         }
-                    //     }
+                 
                     IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
                     ISftpClientFactory sftpClientFactory = new SftpClientFactory();
                     PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
@@ -233,7 +207,7 @@ class Build : NukeBuild
                     if (_sftpClient.IsConnected)
                     {
                         Log.Information("SFTP Client connected successfully.");
-                        _sftpClient.ChangeDirectory(RemoteDirectory);
+                        
                     }
                     else
                     {
@@ -246,21 +220,33 @@ class Build : NukeBuild
             _.DependsOn(ConnectSFTP)
                 .Executes(() =>
                 {
+                    
+                    if (_sftpClient == null || !_sftpClient.IsConnected)
+                    {
+                        throw new InvalidOperationException("SFTP Client is not connected.");
+                    }
+
+                    _sftpClient.ChangeDirectory(RemoteDirectory);
+                    Log.Information($"Connected to {_sftpClient.WorkingDirectory}");
 
                     using (FileStream fileStream = new FileStream(LocalDirectoryForDeploy, FileMode.Open, FileAccess.Read))
                     {
                         string fileToRemote = Path.GetFileName(LocalDirectoryForDeploy);
                         _sftpClient.UploadFile(fileStream, fileToRemote);
+
+                        if (_sftpClient.Exists(fileToRemote))
+                        {
+                            Log.Information($"File '{fileToRemote}' was uploaded successfully to '{_sftpClient.WorkingDirectory}/{fileToRemote}'");
+                        }
+                        else
+                        {
+                            Log.Error($"File '{fileToRemote}' was not uploaded successfully");
+                        }
+
                     }
 
                     _sftpClient.Disconnect();
-
-
-                    // IPrivateKeyProvider = privateKeyProvider = new PrivateKeyProvider();
-                    // IStfpClientFactory = SftpClientFactory = new SftpClientFactory();
-                    // sftpService sftpService = new sftpService(privateKeyProvider, SftpClientFactory);
-
-                    // sftpService.UploadFileToSftp(ENERGY_SECRET, SshHost, SshUsername, RemoteDirectory, localFilePath);
+                    Log.Information("SFTP Client Disconnected");
 
                 });
 }
