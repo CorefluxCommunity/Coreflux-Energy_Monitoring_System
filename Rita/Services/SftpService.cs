@@ -13,7 +13,6 @@ namespace Cloud.Deployment
 {
       public class SftpService : ISftpService
       {
-        private readonly IPrivateKeyProvider _privateKeyProvider;
         private readonly ISftpClientFactory _sftpClientFactory;
         private SftpClient _sftpClient;
         private SshClient _sshClient;

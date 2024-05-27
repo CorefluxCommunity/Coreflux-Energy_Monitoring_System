@@ -10,6 +10,7 @@ using Cloud.Interfaces;
 using Cloud.Models;
 using Cloud.Services;
 using Microsoft.Build.Framework;
+using Newtonsoft.Json.Linq;
 using Nuke.Common;
 using Nuke.Common.CI;
 using Nuke.Common.CI.GitHubActions;
@@ -48,11 +49,12 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
+    [Parameter("Path to the parameters file")] readonly AbsolutePath ParametersFile = Path.Combine(RootDirectory, "./nuke", "parameters.json");
+    [Parameter("Path to the project paths file")] readonly AbsolutePath ProjectPathsFile = Path.Combine(RootDirectory, "./nuke", "projectsPath.json");
+
     readonly string SshUsername = "root";
 
     readonly string SshHost = "209.38.44.94";
-
-    readonly int SshPort = 22;
 
     [Parameter] [Secret]
     private readonly string ENERGY_SECRET;
@@ -67,10 +69,15 @@ class Build : NukeBuild
     readonly AbsolutePath LocalDirectoryForDeploy = Path.Combine(PathServiceProvider.paths.GetPathForPhase(
         Phase.Zip), "linux-x64.zip");
 
-        
+
 
     private ISftpService _sftpService;
 
+
+    JObject LoadJson(AbsolutePath filePath)
+    {
+        return JObject.Parse(File.ReadAllText(filePath));
+    }
 
 
     Target Init => _ => _
@@ -130,9 +137,21 @@ class Build : NukeBuild
             _.DependsOn(Restore)
                 .Executes(() =>
                 {
-                    DotNetTasks.DotNetTest(_ =>
-                        _.SetProjectFile(paths.GetPathForPhase(Phase.Test))
-                    );
+                    // DotNetTasks.DotNetTest(_ =>
+                    //     _.SetProjectFile(paths.GetPathForPhase(Phase.Test))
+                    // );
+
+                    JObject parameters = LoadJson(ParametersFile);
+                    JObject projectPaths = LoadJson(ProjectPathsFile);
+
+                    List<string> projectsToTest = parameters["ProjectsToTest"].ToObject<List<string>>();
+
+                    foreach (string project in projectsToTest)
+                    {
+                        string projectPath = projectPaths[project].ToString();
+                        DotNetTasks.DotNetTest(_ => _.SetProjectFile(projectPath));
+                    }
+                    
                 });
 
     Target Compile =>
@@ -142,8 +161,18 @@ class Build : NukeBuild
                 {
                     try
                     {
-                        var projectPath = paths.ProvidePath(runtime, Phase.Build);
-                        var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
+                        // var projectPath = paths.ProvidePath(runtime, Phase.Build);
+                        string outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
+
+                        JObject parameters = LoadJson(ParametersFile);
+                        JObject projectPaths = LoadJson(ProjectPathsFile);
+
+                        List<string> projectsToBuild = parameters["ProjectsToBuildForDroplet"].ToObject<List<string>>();
+
+                        foreach(string project in projectsToBuild)
+                        {
+                            string projectPath = projectPaths[project].ToString();
+                            string projectName = BuildUtils.GetProjectName(projectPath);
 
                         Log.Information($"Compiling the program for {runtime.dotNetIdentifier}...");
 
@@ -151,7 +180,7 @@ class Build : NukeBuild
                             s.SetProject(projectPath)
                                 .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
                                 .AddProperty("PublishSelfContained", true)
-                                .AddProperty("AssemblyName", "ShellyApp")
+                                .AddProperty("AssemblyName", projectName)
                                 .SetRuntime(runtime.dotNetIdentifier)
                                 .SetConfiguration("Release")
                                 .EnablePublishSingleFile()
@@ -164,11 +193,11 @@ class Build : NukeBuild
                         );
 
                         IFileDeletionService fileDeletionService = new FileDeletionService();
-                        fileDeletionService.DeleteFiles(outputDirectory, "ShellyApp.pdb", "appsettings.Development.json", "appsettings.json");
+                        fileDeletionService.DeleteFiles(outputDirectory, $"{projectName}.pdb" , "appsettings.Development.json", "appsettings.json");
 
                         Log.Information("Unecessary files deleted successfully.");
 
-                    
+                    }
                     }
                     catch (Exception ex)
                     {
@@ -235,7 +264,7 @@ class Build : NukeBuild
                 .Executes(() =>
                 {
                     
-                    _sftpService.ExecuteCommand($"./ShellyApp");
+                    // _sftpService.ExecuteCommand($"./ShellyApp");
 
                     
                 });
