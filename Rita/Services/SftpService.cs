@@ -74,7 +74,7 @@ namespace Cloud.Deployment
             public void Disconnect()
             {
                 _sftpClient.Disconnect();
-                Log.Information("SFTP Client disconnected.");
+                Log.Information("SFTP Client Disconnected.");
             }
 
             public bool IsConnected => _sftpClient != null && _sftpClient.IsConnected;
