@@ -214,11 +214,6 @@ class Build : NukeBuild
             _.DependsOn(ConnectSFTP)
                 .Executes(() =>
                 {
-                    
-                    if (_sftpClient == null || !_sftpClient.IsConnected)
-                    {
-                        throw new InvalidOperationException("SFTP Client is not connected.");
-                    }
 
                    _sftpService.UploadFile(LocalDirectoryForDeploy, RemoteDirectory);
 
