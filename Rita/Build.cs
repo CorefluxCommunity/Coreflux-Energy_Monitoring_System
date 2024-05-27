@@ -234,9 +234,9 @@ class Build : NukeBuild
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    string remoteZipFilePath = $"{RemoteDirectory}/{Path.GetFileName(LocalDirectoryForDeploy)}";
+                    
                     _sftpService.ExecuteCommand($"./ShellyApp");
 
-                    _sftpService.Disconnect();
+                    
                 });
 }
