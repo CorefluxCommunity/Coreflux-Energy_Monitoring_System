@@ -49,8 +49,8 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
-    [Parameter("Path to the parameters file")] readonly AbsolutePath ParametersFile = Path.Combine(RootDirectory, "./nuke", "parameters.json");
-    [Parameter("Path to the project paths file")] readonly AbsolutePath ProjectPathsFile = Path.Combine(RootDirectory, "./nuke", "projectsPath.json");
+    [Parameter("Path to the parameters file")] readonly AbsolutePath ParametersFile = RootDirectory / ".nuke" / "parameters.json";
+    [Parameter("Path to the project paths file")] readonly AbsolutePath ProjectPathsFile = RootDirectory / ".nuke" / "projectPath.json";
 
     readonly string SshUsername = "root";
 
