@@ -9,4 +9,6 @@ public class Office
 	public string Topic { get; set; } = "";
 	public double TotalEnergy;
     public List<Room> Rooms { get; set; } = new List<Room>();
+
+	public long UnixTimestamp;
 }
