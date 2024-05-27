@@ -75,7 +75,7 @@ namespace Cloud.Deployment
                 }
             }
 
-            public void ExecuteCommand(string command)
+            public (string Result, string Error, int ExitStatus) ExecuteCommand(string command)
             {
                 if(_sshClient == null || !_sshClient.IsConnected)
                 {
@@ -85,8 +85,14 @@ namespace Cloud.Deployment
                 using (SshCommand cmd = _sshClient.CreateCommand(command))
                 {
                     string result = cmd.Execute();
+                    string error = cmd.Error;
+                    int exitStatus = cmd.ExitStatus;
 
                     Log.Information($"Command executed with result: {result}");
+                    Log.Information($"Command error (if any): {error}");
+                    Log.Information($"Command exit status: {exitStatus}");
+
+                    return (result, error, exitStatus);
                     
                 }
             }

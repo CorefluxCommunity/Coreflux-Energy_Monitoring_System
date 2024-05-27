@@ -232,7 +232,16 @@ class Build : NukeBuild
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    _sftpService.ExecuteCommand($"cd {RemoteDirectory} && ./ShellyApp");
+                   var (result, error, exitStatus) = _sftpService.ExecuteCommand($"cd {RemoteDirectory} && ./ShellyApp");
+
+                   if (exitStatus == 0)
+                   {
+                    Log.Information($"Successfully executed ShellyApp: \n{result}");
+                   }
+                   else
+                   {
+                    Log.Information($"Failed to Execute the APP. {error}");
+                   }
 
                     // _sftpService.Disconnect();
                 });
