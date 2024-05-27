@@ -89,8 +89,7 @@ namespace Cloud.Deployment
                     int exitStatus = cmd.ExitStatus;
 
                     Log.Information($"Command executed with result: {result}");
-                    Log.Information($"Command error (if any): {error}");
-                    Log.Information($"Command exit status: {exitStatus}");
+
 
                     return (result, error, exitStatus);
                     
