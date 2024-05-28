@@ -281,9 +281,9 @@ WantedBy=multi-user.target
                 {
                     // _serviceFileManager = new ServiceFileManager();
                     // _serviceFileManager.CreateServiceFile();
-                    File.WriteAllText($"/tmp/ProjectShelly.service", serviceFileContent);
-                    ProcessTasks.StartProcess("sudo", $"cp /tmp/ProjectShelly.service", $"/etc/systemd/system/").AssertZeroExitCode();
-                    ProcessTasks.StartProcess("sudo", $"rm /tmp/ProjectShelly.service").AssertZeroExitCode();
+                    File.WriteAllText($"/tmp/{ServiceName}", serviceFileContent);
+                    ProcessTasks.StartProcess("sudo", $"cp /tmp/{ServiceName}", $"/etc/systemd/system/{ServiceName}").AssertZeroExitCode();
+                    ProcessTasks.StartProcess("sudo", $"rm /tmp/{ServiceName}").AssertZeroExitCode();
                 });
 
 
@@ -298,9 +298,9 @@ WantedBy=multi-user.target
                     // _serviceManager.StartService();
 
                     ProcessTasks.StartProcess("sudo", "systemctl daemon-reload").AssertZeroExitCode();
-                    ProcessTasks.StartProcess("sudo", "systemctl enable ProjectShelly.service").AssertZeroExitCode();
-                    ProcessTasks.StartProcess("sudo", "systemctl start ProjectShelly.service").AssertZeroExitCode();
+                    ProcessTasks.StartProcess("sudo", $"systemctl enable {ServiceName}").AssertZeroExitCode();
+                    ProcessTasks.StartProcess("sudo", $"systemctl start {ServiceName}").AssertZeroExitCode();
 
-                    ProcessTasks.StartProcess("sudo", "systemctl status ProjectShelly.service").AssertZeroExitCode();
+                    ProcessTasks.StartProcess("sudo", $"systemctl status {ServiceName}").AssertZeroExitCode();
                 });
 }
