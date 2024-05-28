@@ -8,29 +8,24 @@ namespace Cloud.Services
 {
     public class ServiceFileManager : IServiceFileManager
     {
-        private readonly string _serviceFilePath;
-        private readonly string _serviceName;
-        private readonly string _serviceDirectory;
 
-        public ServiceFileManager(string serviceFilePath, string serviceName, string serviceDirectory)
+        public ServiceFileManager()
         {
-            _serviceFilePath = serviceFilePath;
-            _serviceName = serviceName;
-            _serviceDirectory = serviceDirectory;
+            
         }
 
         public void CreateServiceFile()
         {   
-            string systemServiceFilePath = $"/etc/systemd/system/{_serviceName}";
+            string systemServiceFilePath = $"/etc/systemd/system/ProjectShelly.service";
             if (File.Exists(systemServiceFilePath))
             {
                 File.Delete(systemServiceFilePath);
             }
 
             string serviceFileContent = GetServiceFileContent();
-            File.WriteAllText(_serviceFilePath, serviceFileContent);
+            File.WriteAllText(systemServiceFilePath, serviceFileContent);
             
-            ProcessTasks.StartProcess("sudo", $"cp {_serviceFilePath} /etc/systemd/system/{_serviceName}").AssertZeroExitCode();
+            
         }
 
         private string GetServiceFileContent()
@@ -41,7 +36,7 @@ Description=Project Shelly Service
 After=network.target
 
 [Service]
-ExecStart={_serviceDirectory}/ProjectShelly
+ExecStart=/root/aggregator/ProjectShelly
 Restart=always
 
 

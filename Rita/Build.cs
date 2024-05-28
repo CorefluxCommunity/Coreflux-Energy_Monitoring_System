@@ -264,7 +264,7 @@ class Build : NukeBuild
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    _serviceFileManager = new ServiceFileManager(ServiceFilePath, ServiceName, RemoteDirectory);
+                    _serviceFileManager = new ServiceFileManager();
                     _serviceFileManager.CreateServiceFile();
                 });
 
@@ -274,7 +274,7 @@ class Build : NukeBuild
             _.DependsOn(CreateService)
                 .Executes(() =>
                 {
-                    _serviceManager = new ServiceManager(ServiceName);
+                    _serviceManager = new ServiceManager();
                     _serviceManager.ReloadSystem();
                     _serviceManager.EnableService();
                     _serviceManager.StartService();

@@ -7,11 +7,11 @@ namespace Cloud.Services
 {
     public class ServiceManager : IServiceManager
     {
-        private readonly string _serviceName;
+        
 
-        public ServiceManager(string serviceName)
+        public ServiceManager()
         {
-            _serviceName = serviceName;
+           
         }
 
         public void ReloadSystem()
@@ -21,12 +21,12 @@ namespace Cloud.Services
 
         public void EnableService()
         {
-            ProcessTasks.StartProcess("sudo", $"systemctl enable {_serviceName}").AssertZeroExitCode();
+            ProcessTasks.StartProcess("sudo", $"systemctl enable ProjectShelly.service").AssertZeroExitCode();
         }
 
         public void StartService()
         {
-            ProcessTasks.StartProcess("sudo", $"systemctl start {_serviceName}").AssertZeroExitCode();
+            ProcessTasks.StartProcess("sudo", $"systemctl start ProjectShelly.service").AssertZeroExitCode();
         }
     }
 }
