@@ -49,8 +49,6 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
-    [Parameter("Path to the parameters file")] readonly AbsolutePath ParametersFile = RootDirectory / ".nuke" / "parameters.json";
-    [Parameter("Path to the project paths file")] readonly AbsolutePath ProjectPathsFile = RootDirectory / ".nuke" / "projectsPath.json";
 
     readonly string SshUsername = "root";
 
@@ -60,19 +58,23 @@ class Build : NukeBuild
     [Secret]
     private readonly string ENERGY_SECRET;
 
-
-    readonly string RemoteDirectory = "/root/aggregator/";
     RuntimeConfig runtimeConfig = new RuntimeConfig();
 
     Runtime runtime => runtimeConfig.Runtime;
+
+    [Parameter("Path to the parameters file")] readonly AbsolutePath ParametersFile = RootDirectory / ".nuke" / "parameters.json";
+    [Parameter("Path to the project paths file")] readonly AbsolutePath ProjectPathsFile = RootDirectory / ".nuke" / "projectsPath.json";
     readonly AbsolutePathList paths = PathServiceProvider.paths;
 
-    readonly AbsolutePath LocalDirectoryForDeploy = Path.Combine(PathServiceProvider.paths.GetPathForPhase(
-        Phase.Zip), "linux-x64.zip");
+    readonly AbsolutePath LocalDirectoryForDeploy = Path.Combine(PathServiceProvider.paths.GetPathForPhase(Phase.Zip), "linux-x64.zip");
 
+    readonly string RemoteDirectory = "/root/aggregator/";
+    AbsolutePath TempDirectory => (AbsolutePath) "/tmp";
+    AbsolutePath ServiceFilePath => TempDirectory / "ProjectShelly.service";
 
-    private SshClient _sshClient;
-    private SftpClient _sftpClient;
+    string ServiceName => "ProjectShelly.service";
+    IServiceFileManager _serviceFileManager;
+    IServiceManager _serviceManager;
     private ISftpService _sftpService;
 
 
@@ -139,9 +141,7 @@ class Build : NukeBuild
             _.DependsOn(Restore)
                 .Executes(() =>
                 {
-                    // DotNetTasks.DotNetTest(_ =>
-                    //     _.SetProjectFile(paths.GetPathForPhase(Phase.Test))
-                    // );
+                 
 
                     JObject parameters = LoadJson(ParametersFile);
                     JObject projectPaths = LoadJson(ProjectPathsFile);
@@ -264,27 +264,8 @@ class Build : NukeBuild
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    string serviceContent = $@"
-[Unit]
-Description=ProjectShellyService
-After=network.target
-
-[Service]
-ExecStart=/root/aggregator/ProjectShelly
-Restart=always
-User=root
-Group=root
-Environment=PATH=/usr/bin:/usr/local/bin
-WorkingDirectory=/root/aggregator
-
-[Install]
-WantedBy=multi-user.target
-                    
-";
-                    ServiceCreator serviceCreator = new ServiceCreator(serviceContent);
-                    string generatedServiceContent = serviceCreator.GetServiceContent();
-
-                    File.WriteAllText(TemporaryDirectory / "serviceContent.txt", generatedServiceContent);
+                    _serviceFileManager = new ServiceFileManager(ServiceFilePath, ServiceName, RemoteDirectory);
+                    _serviceFileManager.CreateServiceFile();
                 });
 
 
@@ -293,33 +274,10 @@ WantedBy=multi-user.target
             _.DependsOn(CreateService)
                 .Executes(() =>
                 {
-
-
-                    if (_sshClient == null || _sftpClient == null)
-                    {
-                        IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
-                        ISftpClientFactory sftpClientFactory = new SftpClientFactory();
-
-                        PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
-                        _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
-
-                        _sftpService.Connect(key);
-                    }
-
-                    string serviceName = "ProjectShelly";
-                    string serviceContent = File.ReadAllText(TemporaryDirectory / "serviceContent.txt");
-
-                    ServiceManager serviceManager = new ServiceManager(serviceName);
-                    serviceManager.StopAndDisableService(_sshClient);
-                    serviceManager.RemoveServiceFile(_sshClient);
-                    serviceManager.UploadServiceFile(_sftpClient, serviceContent);
-                    serviceManager.ReloadDaemon(_sshClient);
-                    serviceManager.EnableAndStartService(_sshClient);
-
-                    string status = serviceManager.CheckServiceStatus(_sshClient);
-                    Log.Information($"Service {serviceName} is {status}");
-
-                    _sftpService.Disconnect();
+                    _serviceManager = new ServiceManager(ServiceName);
+                    _serviceManager.ReloadSystem();
+                    _serviceManager.EnableService();
+                    _serviceManager.StartService();
 
                 });
 }

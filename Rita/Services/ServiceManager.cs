@@ -1,54 +1,32 @@
-using Renci.SshNet;
-using System.IO;
-using System.Text;
+
+using System.Diagnostics;
+using Cloud.Interfaces;
+using Nuke.Common.Tooling;
 
 namespace Cloud.Services
 {
-    public class ServiceManager
+    public class ServiceManager : IServiceManager
     {
         private readonly string _serviceName;
-
 
         public ServiceManager(string serviceName)
         {
             _serviceName = serviceName;
-
         }
 
-        public void StopAndDisableService(SshClient sshClient)
+        public void ReloadSystem()
         {
-            sshClient.RunCommand($"systemctl stop {_serviceName}");
-            sshClient.RunCommand($"systemctl disable {_serviceName}");   
+            ProcessTasks.StartProcess("systemctl", "daemon-reload").AssertZeroExitCode();
         }
 
-        public void RemoveServiceFile(SshClient sshClient)
+        public void EnableService()
         {
-            sshClient.RunCommand($"rm /etc/systemd/system/{_serviceName}.service");
+            ProcessTasks.StartProcess("systemctl", $"enable {_serviceName}").AssertZeroExitCode();
         }
 
-        public void UploadServiceFile(SftpClient sftpClient, string serviceContent)
+        public void StartService()
         {
-            using (MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(serviceContent)))
-            {
-                sftpClient.UploadFile(stream, $"/etc/systemd/system/{_serviceName}");
-            }
-        }
-
-        public void ReloadDaemon(SshClient sshClient)
-        {
-            sshClient.RunCommand("systemctl daemon-reload");
-        }
-
-        public void EnableAndStartService(SshClient sshClient)
-        {
-            sshClient.RunCommand($"systemctl enable {_serviceName}");
-            sshClient.RunCommand($"systemctl start {_serviceName}");
-        }
-
-        public string CheckServiceStatus(SshClient sshClient)
-        {
-            var result = sshClient.RunCommand($"systemctl is-active {_serviceName}");
-            return result.Result.Trim();
+            ProcessTasks.StartProcess("systemctl", $"start {_serviceName}").AssertZeroExitCode();
         }
     }
 }
