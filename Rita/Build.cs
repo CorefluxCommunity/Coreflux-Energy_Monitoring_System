@@ -289,21 +289,22 @@ WantedBy=multi-user.target
 
     Target RunService =>
         _ => 
-            _.DependsOn(Unzip)
+            _.DependsOn(CreateService)
                 .Executes(() =>
                 {
                     
                     string serviceName = "ProjectShellyService";
                     string serviceContent = File.ReadAllText(TemporaryDirectory / "serviceContent.txt");
 
-                    ServiceManager serviceManager = new ServiceManager(serviceName, _sshClient, _sftpClient);
-                    serviceManager.StopAndDisableService();
-                    serviceManager.RemoveServiceFile();
-                    serviceManager.UploadServiceFile(serviceContent);
-                    serviceManager.ReloadDaemon();
-                    serviceManager.EnableAndStartService();
+                    ServiceManager serviceManager = new ServiceManager(serviceName);
+                    serviceManager.StopAndDisableService(_sshClient);
+                    serviceManager.RemoveServiceFile(_sshClient);
+                    serviceManager.UploadServiceFile(_sftpClient, serviceContent);
+                    serviceManager.ReloadDaemon(_sshClient);
+                    serviceManager.EnableAndStartService(_sshClient);
 
-                    
+                    string status = serviceManager.CheckServiceStatus(_sshClient);
+                    Log.Information($"Service {serviceName} is {status}");
                     
                 });
 }

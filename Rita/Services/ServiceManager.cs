@@ -10,41 +10,46 @@ namespace Cloud.Services
         private readonly SshClient _sshClient;
         private readonly SftpClient _sftpClient;
 
-        public ServiceManager(string serviceName, SshClient sshClient, SftpClient sftpClient)
+        public ServiceManager(string serviceName)
         {
             _serviceName = serviceName;
-            _sshClient = sshClient;
-            _sftpClient = sftpClient;
+
         }
 
-        public void StopAndDisableService()
+        public void StopAndDisableService(SshClient sshClient)
         {
-            _sshClient.RunCommand($"systemctl stop {_serviceName}");
-            _sshClient.RunCommand($"systemctl disable {_serviceName}");   
+            sshClient.RunCommand($"systemctl stop {_serviceName}");
+            sshClient.RunCommand($"systemctl disable {_serviceName}");   
         }
 
-        public void RemoveServiceFile()
+        public void RemoveServiceFile(SshClient sshClient)
         {
-            _sshClient.RunCommand($"rm /etc/systemd/system/{_serviceName}.service");
+            sshClient.RunCommand($"rm /etc/systemd/system/{_serviceName}.service");
         }
 
-        public void UploadServiceFile(string serviceContent)
+        public void UploadServiceFile(SftpClient sftpClient, string serviceContent)
         {
             using (MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(serviceContent)))
             {
-                _sftpClient.UploadFile(stream, $"/etc/systemd/system/{_serviceName}");
+                sftpClient.UploadFile(stream, $"/etc/systemd/system/{_serviceName}");
             }
         }
 
-        public void ReloadDaemon()
+        public void ReloadDaemon(SshClient sshClient)
         {
-            _sshClient.RunCommand("systemctl daemon-reload");
+            sshClient.RunCommand("systemctl daemon-reload");
         }
 
-        public void EnableAndStartService()
+        public void EnableAndStartService(SshClient sshClient)
         {
-            _sshClient.RunCommand($"systemctl enable {_serviceName}");
-            _sshClient.RunCommand($"systemctl start {_serviceName}");
+            sshClient.RunCommand($"systemctl enable {_serviceName}");
+            sshClient.RunCommand($"systemctl start {_serviceName}");
+        }
+
+        public string CheckServiceStatus(SshClient sshClient)
+        {
+            var result = sshClient.RunCommand($"systemctl is-active {_serviceName}");
+            return result.Result.Trim();
         }
     }
 }
