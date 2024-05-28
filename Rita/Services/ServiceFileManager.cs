@@ -45,7 +45,7 @@ ExecStart=/root/aggregator/ProjectShelly
 Restart=always
 User=root
 Group=root
-Environment=PATH=/usr/bin:/usr/local/bin
+Environment=HOME=/root
 WorkingDirectory=/root/aggregator
 
 [Install]
