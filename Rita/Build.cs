@@ -70,9 +70,9 @@ class Build : NukeBuild
 
     readonly string RemoteDirectory = "/root/aggregator/";
     AbsolutePath TempDirectory => (AbsolutePath) "/tmp";
-    AbsolutePath ServiceFilePath => TempDirectory / "ProjectShelly.service";
+    AbsolutePath ServiceFilePath => TempDirectory / "projectshelly.service";
 
-    string ServiceName => "ProjectShelly.service";
+    string ServiceName => "projectshelly.service";
     IServiceFileManager _serviceFileManager;
     IServiceManager _serviceManager;
     private ISftpService _sftpService;
