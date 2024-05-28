@@ -43,10 +43,7 @@ After=network.target
 [Service]
 ExecStart=/root/aggregator/ProjectShelly
 Restart=always
-User=root
-Group=root
-Environment=HOME=/root
-WorkingDirectory=/root/aggregator
+
 
 [Install]
 WantedBy=multi-user.target
