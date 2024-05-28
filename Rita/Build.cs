@@ -282,7 +282,7 @@ WantedBy=multi-user.target
                     // _serviceFileManager = new ServiceFileManager();
                     // _serviceFileManager.CreateServiceFile();
                     File.WriteAllText($"/tmp/ProjectShelly.service", serviceFileContent);
-                    ProcessTasks.StartProcess("sudo", $"cp /tmp/ProjectShelly.service", $"/etc/systemd/system/ProjectShelly.service").AssertZeroExitCode();
+                    ProcessTasks.StartProcess("sudo", $"cp /tmp/ProjectShelly.service", $"/etc/systemd/system/").AssertZeroExitCode();
                     ProcessTasks.StartProcess("sudo", $"rm /tmp/ProjectShelly.service").AssertZeroExitCode();
                 });
 
