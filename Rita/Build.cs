@@ -306,7 +306,7 @@ WantedBy=multi-user.target
                         _sftpService.Connect(key);
                     }
 
-                    string serviceName = "ProjectShellyService";
+                    string serviceName = "ProjectShelly";
                     string serviceContent = File.ReadAllText(TemporaryDirectory / "serviceContent.txt");
 
                     ServiceManager serviceManager = new ServiceManager(serviceName);
