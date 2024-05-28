@@ -39,7 +39,7 @@ using static Nuke.Common.IO.PathConstruction;
 )]
 class Build : NukeBuild
 {
-    public static int Main() => Execute<Build>(x => x.Init, x => x.Execution);
+    public static int Main() => Execute<Build>(x => x.Init, x => x.RunService);
 
     [Solution]
     readonly Solution Solution;
@@ -70,7 +70,8 @@ class Build : NukeBuild
         Phase.Zip), "linux-x64.zip");
 
 
-
+    private SshClient _sshClient;
+    private SftpClient _sftpClient;
     private ISftpService _sftpService;
 
 
@@ -257,17 +258,52 @@ class Build : NukeBuild
                     _sftpService.ExecuteCommand($"unzip -o {remoteZipFilePath} -d {RemoteDirectory}");
                 });
 
-  
+    Target CreateService =>
+        _ =>
+            _.DependsOn(Unzip)
+                .Executes(() =>
+                {
+                    string serviceContent = $@"
+[Unit]
+Description=ProjectShellyService
+After=network.target
+
+[Service]
+ExecStart=/root/aggregator/ProjectShelly
+Restart=always
+User=root
+Group=root
+Environment=PATH=/usr/bin:/usr/local/bin
+WorkingDirectory=/root/aggregator
+
+[Install]
+WantedBy=multi-user.target
+                    
+";                  
+                    ServiceCreator serviceCreator = new ServiceCreator(serviceContent);
+                    string generatedServiceContent = serviceCreator.GetServiceContent();
+
+                    File.WriteAllText(TemporaryDirectory / "serviceContent.txt", generatedServiceContent);
+                });
 
 
-    Target Execution =>
+    Target RunService =>
         _ => 
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
                     
-                    // _sftpService.ExecuteCommand($"./ShellyApp");
+                    string serviceName = "ProjectShellyService";
+                    string serviceContent = File.ReadAllText(TemporaryDirectory / "serviceContent.txt");
 
+                    ServiceManager serviceManager = new ServiceManager(serviceName, _sshClient, _sftpClient);
+                    serviceManager.StopAndDisableService();
+                    serviceManager.RemoveServiceFile();
+                    serviceManager.UploadServiceFile(serviceContent);
+                    serviceManager.ReloadDaemon();
+                    serviceManager.EnableAndStartService();
+
+                    
                     
                 });
 }
