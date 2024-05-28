@@ -3,6 +3,7 @@ using Renci.SshNet;
 using System.IO;
 using System.Text;
 using Nuke.Common.Tooling;
+using System.Diagnostics;
 
 namespace Cloud.Services
 {
@@ -28,7 +29,7 @@ namespace Cloud.Services
             }
 
             string serviceFileContent = GetServiceFileContent();
-            File.WriteAllText(_serviceFilePath, serviceFileContent);
+            ProcessTasks.StartProcess("sudo", $"nano {_serviceFilePath} {serviceFileContent}");
             
             ProcessTasks.StartProcess("sudo", $"cp {_serviceFilePath} /etc/systemd/system/{_serviceName}").AssertZeroExitCode();
         }
