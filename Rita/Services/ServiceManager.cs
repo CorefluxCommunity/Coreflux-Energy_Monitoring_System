@@ -26,7 +26,7 @@ namespace Cloud.Services
 
         public void StartService()
         {
-            ProcessTasks.StartProcess("sudo", "systemctl start {_serviceName}", workingDirectory: null).AssertZeroExitCode();
+            ProcessTasks.StartProcess("sudo", $"systemctl start {_serviceName}", workingDirectory: null).AssertZeroExitCode();
         }
     }
 }
