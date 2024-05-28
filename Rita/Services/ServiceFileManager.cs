@@ -41,7 +41,7 @@ Description=Project Shelly Service
 After=network.target
 
 [Service]
-ExecStart={_serviceDirectory}/ProjectShelly
+ExecStart=/root/aggregator/ProjectShelly
 Restart=always
 User=root
 Group=root
