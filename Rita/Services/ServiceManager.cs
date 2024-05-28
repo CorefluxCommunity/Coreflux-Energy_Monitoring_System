@@ -7,8 +7,7 @@ namespace Cloud.Services
     public class ServiceManager
     {
         private readonly string _serviceName;
-        private readonly SshClient _sshClient;
-        private readonly SftpClient _sftpClient;
+
 
         public ServiceManager(string serviceName)
         {

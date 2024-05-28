@@ -56,7 +56,8 @@ class Build : NukeBuild
 
     readonly string SshHost = "209.38.44.94";
 
-    [Parameter] [Secret]
+    [Parameter]
+    [Secret]
     private readonly string ENERGY_SECRET;
 
 
@@ -82,7 +83,7 @@ class Build : NukeBuild
 
 
     Target Init => _ => _
-                
+
                 .DependentFor(Clean)
                 .Executes(() =>
                 {
@@ -152,7 +153,7 @@ class Build : NukeBuild
                         string projectPath = projectPaths[project].ToString();
                         DotNetTasks.DotNetTest(_ => _.SetProjectFile(projectPath));
                     }
-                    
+
                 });
 
     Target Compile =>
@@ -170,35 +171,35 @@ class Build : NukeBuild
 
                         List<string> projectsToBuild = parameters["ProjectsToBuildForDroplet"].ToObject<List<string>>();
 
-                        foreach(string project in projectsToBuild)
+                        foreach (string project in projectsToBuild)
                         {
                             string projectPath = projectPaths[project].ToString();
                             string projectName = BuildUtils.GetProjectName(projectPath);
 
-                        Log.Information($"Compiling the program for {runtime.dotNetIdentifier}...");
+                            Log.Information($"Compiling the program for {runtime.dotNetIdentifier}...");
 
-                        DotNetTasks.DotNetPublish(s =>
-                            s.SetProject(projectPath)
-                                .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
-                                .AddProperty("PublishSelfContained", true)
-                                .AddProperty("AssemblyName", projectName)
-                                .SetRuntime(runtime.dotNetIdentifier)
-                                .SetConfiguration("Release")
-                                .EnablePublishSingleFile()
-                                .SetOutput(outputDirectory)
-                        );
+                            DotNetTasks.DotNetPublish(s =>
+                                s.SetProject(projectPath)
+                                    .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
+                                    .AddProperty("PublishSelfContained", true)
+                                    .AddProperty("AssemblyName", projectName)
+                                    .SetRuntime(runtime.dotNetIdentifier)
+                                    .SetConfiguration("Release")
+                                    .EnablePublishSingleFile()
+                                    .SetOutput(outputDirectory)
+                            );
 
-                        Log.Information(
-                            "Compilation outputs are directed to: {0}",
-                            outputDirectory
-                        );
+                            Log.Information(
+                                "Compilation outputs are directed to: {0}",
+                                outputDirectory
+                            );
 
-                        IFileDeletionService fileDeletionService = new FileDeletionService();
-                        fileDeletionService.DeleteFiles(outputDirectory, $"{projectName}.pdb" , "appsettings.Development.json", "appsettings.json");
+                            IFileDeletionService fileDeletionService = new FileDeletionService();
+                            fileDeletionService.DeleteFiles(outputDirectory, $"{projectName}.pdb", "appsettings.Development.json", "appsettings.json");
 
-                        Log.Information("Unecessary files deleted successfully.");
+                            Log.Information("Unecessary files deleted successfully.");
 
-                    }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -230,10 +231,10 @@ class Build : NukeBuild
             _.DependsOn(Compress)
                 .Executes(() =>
                 {
-                 
+
                     IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
                     ISftpClientFactory sftpClientFactory = new SftpClientFactory();
-                    
+
                     PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
                     _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
 
@@ -245,15 +246,15 @@ class Build : NukeBuild
             _.DependsOn(ConnectSFTP)
                 .Executes(() =>
                 {
-                   _sftpService.UploadFile(LocalDirectoryForDeploy, RemoteDirectory);
+                    _sftpService.UploadFile(LocalDirectoryForDeploy, RemoteDirectory);
 
                 });
 
     Target Unzip =>
         _ =>
             _.DependsOn(Deploy)
-                .Executes(() => 
-                {   
+                .Executes(() =>
+                {
                     string remoteZipFilePath = $"{RemoteDirectory}/{Path.GetFileName(LocalDirectoryForDeploy)}";
                     _sftpService.ExecuteCommand($"unzip -o {remoteZipFilePath} -d {RemoteDirectory}");
                 });
@@ -279,7 +280,7 @@ WorkingDirectory=/root/aggregator
 [Install]
 WantedBy=multi-user.target
                     
-";                  
+";
                     ServiceCreator serviceCreator = new ServiceCreator(serviceContent);
                     string generatedServiceContent = serviceCreator.GetServiceContent();
 
@@ -288,11 +289,23 @@ WantedBy=multi-user.target
 
 
     Target RunService =>
-        _ => 
+        _ =>
             _.DependsOn(CreateService)
                 .Executes(() =>
                 {
-                    
+
+
+                    if (_sshClient == null || _sftpClient == null)
+                    {
+                        IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
+                        ISftpClientFactory sftpClientFactory = new SftpClientFactory();
+
+                        PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
+                        _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
+
+                        _sftpService.Connect(key);
+                    }
+
                     string serviceName = "ProjectShellyService";
                     string serviceContent = File.ReadAllText(TemporaryDirectory / "serviceContent.txt");
 
@@ -305,6 +318,8 @@ WantedBy=multi-user.target
 
                     string status = serviceManager.CheckServiceStatus(_sshClient);
                     Log.Information($"Service {serviceName} is {status}");
-                    
+
+                    _sftpService.Disconnect();
+
                 });
 }
