@@ -2,6 +2,7 @@ using Cloud.Interfaces;
 using Renci.SshNet;
 using System.IO;
 using System.Text;
+using Nuke.Common.Tooling;
 
 namespace Cloud.Services
 {
@@ -28,7 +29,8 @@ namespace Cloud.Services
 
             string serviceFileContent = GetServiceFileContent();
             File.WriteAllText(_serviceFilePath, serviceFileContent);
-            File.Copy(_serviceFilePath, systemServiceFilePath);
+            
+            ProcessTasks.StartProcess("sudo", $"cp {_serviceFilePath} /etc/systemd/system/{_serviceName}").AssertZeroExitCode();
         }
 
         private string GetServiceFileContent()
