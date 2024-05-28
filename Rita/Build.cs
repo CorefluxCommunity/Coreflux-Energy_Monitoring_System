@@ -257,6 +257,8 @@ class Build : NukeBuild
                     _sftpService.ExecuteCommand($"unzip -o {remoteZipFilePath} -d {RemoteDirectory}");
                 });
 
+  
+
 
     Target Execution =>
         _ => 
