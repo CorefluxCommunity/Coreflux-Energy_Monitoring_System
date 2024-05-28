@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -50,20 +49,8 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
-    string serviceFileContent = @"
-[Unit]
-Description=Project Shelly Service
-After=network.target
-
-[Service]
-ExecStart=/root/aggregator/ProjectShelly
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-";
-    
-
+    [Parameter("Path to the parameters file")] readonly AbsolutePath ParametersFile = RootDirectory / ".nuke" / "parameters.json";
+    [Parameter("Path to the project paths file")] readonly AbsolutePath ProjectPathsFile = RootDirectory / ".nuke" / "projectsPath.json";
 
     readonly string SshUsername = "root";
 
@@ -76,16 +63,13 @@ WantedBy=multi-user.target
     RuntimeConfig runtimeConfig = new RuntimeConfig();
 
     Runtime runtime => runtimeConfig.Runtime;
-
-    [Parameter("Path to the parameters file")] readonly AbsolutePath ParametersFile = RootDirectory / ".nuke" / "parameters.json";
-    [Parameter("Path to the project paths file")] readonly AbsolutePath ProjectPathsFile = RootDirectory / ".nuke" / "projectsPath.json";
     readonly AbsolutePathList paths = PathServiceProvider.paths;
 
     readonly AbsolutePath LocalDirectoryForDeploy = Path.Combine(PathServiceProvider.paths.GetPathForPhase(Phase.Zip), "linux-x64.zip");
 
     readonly string RemoteDirectory = "/root/aggregator/";
     AbsolutePath TempDirectory => (AbsolutePath) "/tmp";
-    AbsolutePath ServiceFilePath => TempDirectory / "projectshelly.service";
+    AbsolutePath ServiceFilePath => TempDirectory / "ProjectShelly.service";
 
     string ServiceName => "projectshelly.service";
     IServiceFileManager _serviceFileManager;
@@ -156,7 +140,9 @@ WantedBy=multi-user.target
             _.DependsOn(Restore)
                 .Executes(() =>
                 {
-                 
+                    // DotNetTasks.DotNetTest(_ =>
+                    //     _.SetProjectFile(paths.GetPathForPhase(Phase.Test))
+                    // );
 
                     JObject parameters = LoadJson(ParametersFile);
                     JObject projectPaths = LoadJson(ProjectPathsFile);
@@ -279,11 +265,8 @@ WantedBy=multi-user.target
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    // _serviceFileManager = new ServiceFileManager();
-                    // _serviceFileManager.CreateServiceFile();
-                    File.WriteAllText($"/tmp/{ServiceName}", serviceFileContent);
-                    ProcessTasks.StartProcess("sudo", $"cp /tmp/{ServiceName}", $"/etc/systemd/system/{ServiceName}").AssertZeroExitCode();
-                    ProcessTasks.StartProcess("sudo", $"rm /tmp/{ServiceName}").AssertZeroExitCode();
+                    _serviceFileManager = new ServiceFileManager(ServiceFilePath, ServiceName);
+                    _serviceFileManager.CreateServiceFile();
                 });
 
 
@@ -292,15 +275,10 @@ WantedBy=multi-user.target
             _.DependsOn(CreateService)
                 .Executes(() =>
                 {
-                    // _serviceManager = new ServiceManager();
-                    // _serviceManager.ReloadSystem();
-                    // _serviceManager.EnableService();
-                    // _serviceManager.StartService();
+                    _serviceManager = new ServiceManager(ServiceName);
+                    _serviceManager.ReloadSystem();
+                    _serviceManager.EnableService();
+                    _serviceManager.StartService();
 
-                    ProcessTasks.StartProcess("sudo", "systemctl daemon-reload").AssertZeroExitCode();
-                    ProcessTasks.StartProcess("sudo", $"systemctl enable {ServiceName}").AssertZeroExitCode();
-                    ProcessTasks.StartProcess("sudo", $"systemctl start {ServiceName}").AssertZeroExitCode();
-
-                    ProcessTasks.StartProcess("sudo", $"systemctl status {ServiceName}").AssertZeroExitCode();
                 });
 }
