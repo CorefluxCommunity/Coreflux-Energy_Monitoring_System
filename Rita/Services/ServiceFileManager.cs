@@ -46,7 +46,7 @@ Restart=always
 User=root
 Group=root
 Environment=PATH=/usr/bin:/usr/local/bin
-WorkingDirectory={_serviceDirectory}
+WorkingDirectory=/root/aggregator
 
 [Install]
 WantedBy=multi-user.target
