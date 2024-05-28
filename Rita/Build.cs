@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -48,6 +49,20 @@ class Build : NukeBuild
     readonly Configuration Configuration = IsLocalBuild
         ? Configuration.Debug
         : Configuration.Release;
+
+    string serviceFileContent = @"
+[Unit]
+Description=Project Shelly Service
+After=network.target
+
+[Service]
+ExecStart=/root/aggregator/ProjectShelly
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+";
+    
 
 
     readonly string SshUsername = "root";
@@ -264,8 +279,9 @@ class Build : NukeBuild
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    _serviceFileManager = new ServiceFileManager();
-                    _serviceFileManager.CreateServiceFile();
+                    // _serviceFileManager = new ServiceFileManager();
+                    // _serviceFileManager.CreateServiceFile();
+                    File.WriteAllText($"/etc/systemd/system/ProjectShelly.service", serviceFileContent);
                 });
 
 
@@ -274,10 +290,15 @@ class Build : NukeBuild
             _.DependsOn(CreateService)
                 .Executes(() =>
                 {
-                    _serviceManager = new ServiceManager();
-                    _serviceManager.ReloadSystem();
-                    _serviceManager.EnableService();
-                    _serviceManager.StartService();
+                    // _serviceManager = new ServiceManager();
+                    // _serviceManager.ReloadSystem();
+                    // _serviceManager.EnableService();
+                    // _serviceManager.StartService();
 
+                    ProcessTasks.StartProcess("sudo", "systemctl daemon-reload").AssertZeroExitCode();
+                    ProcessTasks.StartProcess("sudo", "systemctl enable ProjectShelly.service").AssertZeroExitCode();
+                    ProcessTasks.StartProcess("sudo", "systemctl start ProjectShelly.service").AssertZeroExitCode();
+
+                    ProcessTasks.StartProcess("sudo", "systemctl status ProjectShelly.service").AssertZeroExitCode();
                 });
 }
