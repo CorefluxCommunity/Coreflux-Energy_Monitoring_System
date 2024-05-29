@@ -32,6 +32,8 @@ namespace Cloud.Services
             string serviceFileContent = GetServiceFileContent();
             File.WriteAllText(_serviceFilePath, serviceFileContent);
 
+
+
             
         }
 
