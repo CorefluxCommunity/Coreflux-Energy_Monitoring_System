@@ -267,7 +267,11 @@ class Build : NukeBuild
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    using (SshClient sshClient = new SshClient(SshHost, SshUsername, ENERGY_SECRET))
+                     IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
+                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
+
+                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
+                    using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
                     {
                         sshClient.Connect();
                     _serviceFileManager = new ServiceFileManager(ServiceFilePath, ServiceName);
@@ -283,7 +287,11 @@ class Build : NukeBuild
             _.DependsOn(CreateService)
                 .Executes(() =>
                 {
-                    using (SshClient sshClient = new SshClient(SshHost, SshUsername, ENERGY_SECRET))
+                     IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
+                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
+
+                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
+                    using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
                     {   
                         sshClient.Connect();
                         _serviceManager.ReloadSystem();
