@@ -286,10 +286,19 @@ WantedBy=multi-user.target
                     using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
                     {
                         sshClient.Connect();
-                        string command = $"echo '{Content}' | sudo tee /etc/systemd/system/{ServiceName}";
-                        using (var cmd = sshClient.CreateCommand(command))
+
+                        
+                        string deleteCommand = $"if [ -f /etc/systemd/system/{ServiceName} ]; then sudo rm etc/systemd/system/{ServiceName}";
+                        using (var deleteCmd = sshClient.CreateCommand(deleteCommand))
                         {
-                            var result = cmd.Execute();
+                            var deleteResult = deleteCmd.Execute();
+                        }
+
+
+                        string command = $"echo '{Content}' | sudo tee /etc/systemd/system/{ServiceName}";
+                        using (var createCmd = sshClient.CreateCommand(command))
+                        {
+                            var result = createCmd.Execute();
                         }
                     }
 
@@ -309,9 +318,25 @@ WantedBy=multi-user.target
                     using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
                     {
                         sshClient.Connect();
-                        ProcessTasks.StartProcess("systemctl daemon-reload").AssertZeroExitCode();
-                        ProcessTasks.StartProcess($"systemctl enable {ServiceName}").AssertZeroExitCode();
-                        ProcessTasks.StartProcess($"systemctl start {ServiceName}").AssertZeroExitCode();
+                        
+
+                        string reloadCommand = "sudo systemctl daemon-reload";
+                        using(var reloadCmd = sshClient.CreateCommand(reloadCommand))
+                        {
+                            var reloadResult = reloadCmd.Execute();
+                        }
+
+                        string enableCommand = $"sudo systemctl enable {ServiceName}";
+                        using(var enableCmd = sshClient.CreateCommand(enableCommand))
+                        {
+                            var enableResult = enableCmd.Execute();
+                        }
+
+                        string startCommand = $"sudo systemctl start {ServiceName}";
+                        using(var startCmd = sshClient.CreateCommand(startCommand))
+                        {
+                            var startResult = startCmd.Execute();
+                        }
                     }
                 });
 }
