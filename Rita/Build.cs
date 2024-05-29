@@ -271,9 +271,10 @@ class Build : NukeBuild
                     // _serviceFileManager = new ServiceFileManager(ServiceFilePath, ServiceName);
                     // _serviceFileManager.CreateServiceFile();
 
-
+                    _serviceFileManager = new ServiceFileManager(ServiceFilePath, ServiceName);
                     using (SshClient sshClient = new SshClient(SshHost, SshUsername, ENERGY_SECRET))
                     {
+                        sshClient.Connect();
                         _serviceFileManager.CreateServiceFile();
                     }
 
@@ -285,7 +286,7 @@ class Build : NukeBuild
             _.DependsOn(CreateService)
                 .Executes(() =>
                 {
-
+                    _serviceManager = new ServiceManager(ServiceName);
                     using (SshClient sshClient = new SshClient(SshHost, SshUsername, ENERGY_SECRET))
                     {
                         _serviceManager.ReloadSystem();
