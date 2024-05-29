@@ -268,7 +268,7 @@ class Build : NukeBuild
                 .Executes(() =>
                 {
                      IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
-                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
+                    
 
                     PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
                     using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
@@ -288,12 +288,13 @@ class Build : NukeBuild
                 .Executes(() =>
                 {
                      IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
-                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
+                    
 
                     PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
                     using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
                     {   
                         sshClient.Connect();
+                        _serviceManager = new ServiceManager(ServiceName);
                         _serviceManager.ReloadSystem();
                         _serviceManager.EnableService();
                         _serviceManager.StartService();
