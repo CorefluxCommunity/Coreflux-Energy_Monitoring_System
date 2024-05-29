@@ -30,9 +30,9 @@ namespace Cloud.Services
             }
 
             string serviceFileContent = GetServiceFileContent();
-            // File.WriteAllText(_serviceFilePath, serviceFileContent);
+            File.WriteAllText(_serviceFilePath, serviceFileContent);
 
-            ProcessTasks.StartProcess("nano" ,$"/etc/systemd/system/{_serviceName}").AssertZeroExitCode();
+            
         }
 
         private string GetServiceFileContent()
