@@ -16,17 +16,17 @@ namespace Cloud.Services
 
         public void ReloadSystem()
         {
-            ProcessTasks.StartProcess("cd /etc/systemd/system/", "systemctl daemon-reload").AssertZeroExitCode();
+            ProcessTasks.StartProcess("systemctl daemon-reload", "cd /etc/systemd/system/").AssertZeroExitCode();
         }
 
         public void EnableService()
         {
-            ProcessTasks.StartProcess($"cd /etc/systemd/system/ ", "systemctl enable {_serviceName}").AssertZeroExitCode();
+            ProcessTasks.StartProcess($"systemctl enable {_serviceName}", "cd /etc/systemd/system/").AssertZeroExitCode();
         }
 
         public void StartService()
         {
-            ProcessTasks.StartProcess($"cd /etc/systemd/system/", "systemctl start {_serviceName}").AssertZeroExitCode();
+            ProcessTasks.StartProcess($"systemctl start {_serviceName}", "cd /etc/systemd/system/").AssertZeroExitCode();
         }
     }
 }
