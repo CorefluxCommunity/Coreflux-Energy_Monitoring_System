@@ -68,13 +68,15 @@ class Build : NukeBuild
     readonly AbsolutePath LocalDirectoryForDeploy = Path.Combine(PathServiceProvider.paths.GetPathForPhase(Phase.Zip), "linux-x64.zip");
 
     readonly string RemoteDirectory = "/root/aggregator/";
-    AbsolutePath TempDirectory => (AbsolutePath) "/tmp";
+    AbsolutePath TempDirectory => (AbsolutePath)"/tmp";
     AbsolutePath ServiceFilePath => TempDirectory / "ProjectShelly.service";
 
     string ServiceName => "projectshelly.service";
     IServiceFileManager _serviceFileManager;
     IServiceManager _serviceManager;
     private ISftpService _sftpService;
+
+
 
 
     JObject LoadJson(AbsolutePath filePath)
@@ -265,15 +267,16 @@ class Build : NukeBuild
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
-                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
 
-                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
-                    _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
-                    _serviceFileManager = new ServiceFileManager(ServiceFilePath, ServiceName);
-                    _serviceFileManager.CreateServiceFile();
+                    // _serviceFileManager = new ServiceFileManager(ServiceFilePath, ServiceName);
+                    // _serviceFileManager.CreateServiceFile();
 
-                    
+
+                    using (SshClient sshClient = new SshClient(SshHost, SshUsername, ENERGY_SECRET))
+                    {
+                        _serviceFileManager.CreateServiceFile();
+                    }
+
                 });
 
 
@@ -283,15 +286,11 @@ class Build : NukeBuild
                 .Executes(() =>
                 {
 
-                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
-                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
-
-                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
-                    _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
-                    _serviceManager = new ServiceManager(ServiceName);
-                    _serviceManager.ReloadSystem();
-                    _serviceManager.EnableService();
-                    _serviceManager.StartService();
-
+                    using (SshClient sshClient = new SshClient(SshHost, SshUsername, ENERGY_SECRET))
+                    {
+                        _serviceManager.ReloadSystem();
+                        _serviceManager.EnableService();
+                        _serviceManager.StartService();
+                    }
                 });
 }

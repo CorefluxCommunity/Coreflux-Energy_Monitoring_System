@@ -11,18 +11,18 @@ namespace Cloud.Services
         private readonly string _serviceFilePath;
         private readonly string _serviceName;
 
-        
+
 
         public ServiceFileManager(string serviceFilePath, string serviceName)
         {
             _serviceFilePath = serviceFilePath;
             _serviceName = serviceName;
-            
- 
+
+
         }
 
         public void CreateServiceFile()
-        {   
+        {
             string systemServiceFilePath = $"/etc/systemd/system/{_serviceName}";
             if (File.Exists(systemServiceFilePath))
             {
@@ -34,10 +34,10 @@ namespace Cloud.Services
 
 
 
-            
+
         }
 
-        private string GetServiceFileContent()
+        string GetServiceFileContent()
         {
             return $@"
 [Unit]
@@ -52,7 +52,8 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 ";
-            
+
         }
+
     }
 }
