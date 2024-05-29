@@ -68,15 +68,27 @@ class Build : NukeBuild
     readonly AbsolutePath LocalDirectoryForDeploy = Path.Combine(PathServiceProvider.paths.GetPathForPhase(Phase.Zip), "linux-x64.zip");
 
     readonly string RemoteDirectory = "/root/aggregator/";
-    AbsolutePath TempDirectory => (AbsolutePath)"/tmp";
-    AbsolutePath ServiceFilePath => TempDirectory / "ProjectShelly.service";
+
 
     string ServiceName => "projectshelly.service";
     IServiceFileManager _serviceFileManager;
     IServiceManager _serviceManager;
     private ISftpService _sftpService;
 
+    string Content = 
+    $@"
+[Unit]
+Description=Project Shelly Service
+After=network.target
 
+[Service]
+ExecStart=/root/aggregator/ProjectShelly
+Restart=always
+
+
+[Install]
+WantedBy=multi-user.target
+";
 
 
     JObject LoadJson(AbsolutePath filePath)
@@ -274,8 +286,7 @@ class Build : NukeBuild
                     using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
                     {
                         sshClient.Connect();
-                    _serviceFileManager = new ServiceFileManager(ServiceFilePath, ServiceName);
-                    _serviceFileManager.CreateServiceFile();
+                    File.WriteAllText($"/etc/systemd/system/{ServiceName}", Content);
                     }
                     
 
@@ -294,10 +305,9 @@ class Build : NukeBuild
                     using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
                     {   
                         sshClient.Connect();
-                        _serviceManager = new ServiceManager(ServiceName);
-                        _serviceManager.ReloadSystem();
-                        _serviceManager.EnableService();
-                        _serviceManager.StartService();
+                        ProcessTasks.StartProcess("systemctl daemon-reload").AssertZeroExitCode();
+                        ProcessTasks.StartProcess($"systemctl enable {ServiceName}").AssertZeroExitCode();
+                        ProcessTasks.StartProcess($"systemctl start {ServiceName}").AssertZeroExitCode();
                     }
                 });
 }
