@@ -32,7 +32,7 @@ namespace Cloud.Services
             string serviceFileContent = GetServiceFileContent();
             // File.WriteAllText(_serviceFilePath, serviceFileContent);
 
-            ProcessTasks.StartProcess("sudo nano",$" /etc/systemd/system/{_serviceName}").AssertZeroExitCode();
+            ProcessTasks.StartProcess("sudo nano" ,$" -S /etc/systemd/system/{_serviceName}").AssertZeroExitCode();
         }
 
         private string GetServiceFileContent()
