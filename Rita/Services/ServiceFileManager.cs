@@ -11,11 +11,13 @@ namespace Cloud.Services
         private readonly string _serviceFilePath;
         private readonly string _serviceName;
 
+        
 
         public ServiceFileManager(string serviceFilePath, string serviceName)
         {
             _serviceFilePath = serviceFilePath;
             _serviceName = serviceName;
+            
  
         }
 
@@ -28,9 +30,9 @@ namespace Cloud.Services
             }
 
             string serviceFileContent = GetServiceFileContent();
-            File.WriteAllText(_serviceFilePath, serviceFileContent);
-            
-            ProcessTasks.StartProcess("sudo", $"cp {_serviceFilePath} /etc/systemd/system/{_serviceName}").AssertZeroExitCode();
+            // File.WriteAllText(_serviceFilePath, serviceFileContent);
+
+            ProcessTasks.StartProcess("sudo nano",$" /etc/systemd/system/{_serviceName}").AssertZeroExitCode();
         }
 
         private string GetServiceFileContent()
