@@ -3,19 +3,14 @@
 namespace Cloud.Interfaces
 {
 
-
-    public interface IServiceFileManager
-    {
-        void CreateServiceFile();
-    }
-
     public interface IServiceManager
-    {  
+    {
+        void CreateServiceFile(string serviceName, string content);
         void ReloadSystem();
-        void EnableService();
-        void StartService();
+        void EnableService(string serviceName);
+        void StartService(string serviceName);
 
     }
-    
+
 
 }

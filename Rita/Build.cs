@@ -71,9 +71,11 @@ class Build : NukeBuild
 
 
     string ServiceName => "projectshelly.service";
-    IServiceFileManager _serviceFileManager;
-    IServiceManager _serviceManager;
+
     private ISftpService _sftpService;
+
+    private IServiceManager _serviceManager;
+
 
     string Content =
     $@"
@@ -281,29 +283,41 @@ WantedBy=multi-user.target
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
+                    // IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
 
 
-                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
-                    using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
-                    {
-                        sshClient.Connect();
+                    // PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
+                    // using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
+                    // {
+                    //     sshClient.Connect();
 
                         
-                        string deleteCommand = $"if [ -f /etc/systemd/system/{ServiceName} ]; then sudo rm etc/systemd/system/{ServiceName}";
-                        using (var deleteCmd = sshClient.CreateCommand(deleteCommand))
-                        {
-                            var deleteResult = deleteCmd.Execute();
-                        }
+                    //     string deleteCommand = $"if [ -f /etc/systemd/system/{ServiceName} ]; then sudo rm etc/systemd/system/{ServiceName}";
+                    //     using (var deleteCmd = sshClient.CreateCommand(deleteCommand))
+                    //     {
+                    //         var deleteResult = deleteCmd.Execute();
+                    //     }
 
 
-                        string command = $"echo '{Content}' | sudo tee /etc/systemd/system/{ServiceName}";
-                        using (var createCmd = sshClient.CreateCommand(command))
-                        {
-                            var result = createCmd.Execute();
-                        }
-                    }
+                    //     string command = $"echo '{Content}' | sudo tee /etc/systemd/system/{ServiceName}";
+                    //     using (var createCmd = sshClient.CreateCommand(command))
+                    //     {
+                    //         var result = createCmd.Execute();
+                    //     }
+                    // }
 
+                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
+                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
+                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
+
+                    _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
+                    _sftpService.Connect(key);
+
+
+                    _serviceManager = new ServiceManager(_sftpService);
+                    _serviceManager.CreateServiceFile(ServiceName, Content);
+
+                    _sftpService.Disconnect();
 
                 });
 
@@ -313,32 +327,50 @@ WantedBy=multi-user.target
             _.DependsOn(CreateService)
                 .Executes(() =>
                 {
-                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
+                    // IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
 
 
-                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
-                    using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
-                    {
-                        sshClient.Connect();
+                    // PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
+                    // using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
+                    // {
+                    //     sshClient.Connect();
                         
 
-                        string reloadCommand = "sudo systemctl daemon-reload";
-                        using(var reloadCmd = sshClient.CreateCommand(reloadCommand))
-                        {
-                            var reloadResult = reloadCmd.Execute();
-                        }
+                    //     string reloadCommand = "sudo systemctl daemon-reload";
+                    //     using(var reloadCmd = sshClient.CreateCommand(reloadCommand))
+                    //     {
+                    //         var reloadResult = reloadCmd.Execute();
+                    //     }
 
-                        string enableCommand = $"sudo systemctl enable {ServiceName}";
-                        using(var enableCmd = sshClient.CreateCommand(enableCommand))
-                        {
-                            var enableResult = enableCmd.Execute();
-                        }
+                    //     string enableCommand = $"sudo systemctl enable {ServiceName}";
+                    //     using(var enableCmd = sshClient.CreateCommand(enableCommand))
+                    //     {
+                    //         var enableResult = enableCmd.Execute();
+                    //     }
 
-                        string startCommand = $"sudo systemctl start {ServiceName}";
-                        using(var startCmd = sshClient.CreateCommand(startCommand))
-                        {
-                            var startResult = startCmd.Execute();
-                        }
-                    }
+                    //     string startCommand = $"sudo systemctl start {ServiceName}";
+                    //     using(var startCmd = sshClient.CreateCommand(startCommand))
+                    //     {
+                    //         var startResult = startCmd.Execute();
+                    //     }
+                    // }
+
+                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
+                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
+                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
+
+                    _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
+                    _sftpService.Connect(key);
+
+                    _serviceManager = new ServiceManager(_sftpService);
+                    _sftpService.Connect(key);
+
+                    _serviceManager = new ServiceManager(_sftpService);
+                    _serviceManager.ReloadSystem();
+                    _serviceManager.EnableService(ServiceName);
+                    _serviceManager.StartService(ServiceName);
+
+                    _sftpService.Disconnect();
+                    
                 });
 }
