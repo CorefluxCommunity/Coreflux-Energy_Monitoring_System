@@ -39,7 +39,7 @@ using static Nuke.Common.IO.PathConstruction;
 )]
 class Build : NukeBuild
 {
-    public static int Main() => Execute<Build>(x => x.Init, x => x.RunService);
+    public static int Main() => Execute<Build>(x => x.Init, x => x.CreateService);
 
     [Solution]
     readonly Solution Solution;
@@ -75,7 +75,7 @@ class Build : NukeBuild
     IServiceManager _serviceManager;
     private ISftpService _sftpService;
 
-    string Content = 
+    string Content =
     $@"
 [Unit]
 Description=Project Shelly Service
@@ -279,16 +279,20 @@ WantedBy=multi-user.target
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                     IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
-                    
+                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
+
 
                     PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
                     using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
                     {
                         sshClient.Connect();
-                    File.WriteAllText($"/etc/systemd/system/{ServiceName}", Content);
+                        string command = $"echo '{Content}' | sudo tee /etc/systemd/system/{ServiceName}";
+                        using (var cmd = sshClient.CreateCommand(command))
+                        {
+                            var result = cmd.Execute();
+                        }
                     }
-                    
+
 
                 });
 
@@ -298,12 +302,12 @@ WantedBy=multi-user.target
             _.DependsOn(CreateService)
                 .Executes(() =>
                 {
-                     IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
-                    
+                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
+
 
                     PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
                     using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
-                    {   
+                    {
                         sshClient.Connect();
                         ProcessTasks.StartProcess("systemctl daemon-reload").AssertZeroExitCode();
                         ProcessTasks.StartProcess($"systemctl enable {ServiceName}").AssertZeroExitCode();
