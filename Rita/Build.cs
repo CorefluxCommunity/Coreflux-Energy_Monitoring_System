@@ -84,6 +84,7 @@ After=network.target
 [Service]
 ExecStart=/root/aggregator/ProjectShelly
 Restart=always
+Environment=CONFIG_FILE=/root/aggregator/config.toml
 
 
 [Install]
