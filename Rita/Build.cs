@@ -188,7 +188,7 @@ public class Build : NukeBuild
                             IFileDeletionService fileDeletionService = new FileDeletionService();
                             fileDeletionService.DeleteFiles(outputDirectory, $"{projectName}.pdb", "appsettings.Development.json", "appsettings.json");
 
-                            Log.Information("Unecessary files deleted successfully.");
+                            Log.Information("Unnecessary files deleted successfully.");
 
                         }
                     }
