@@ -222,8 +222,6 @@ public class Build : NukeBuild
             _.DependsOn(Compress)
                 .Executes(() =>
                 {
-
-
                     _sftpService.Connect(_privateKey);
                 });
 
@@ -250,11 +248,8 @@ public class Build : NukeBuild
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    _sftpService.Connect(_privateKey);
-
                     _serviceManager.CreateServiceFile(config.ServiceName, config.Content);
 
-                    _sftpService.Disconnect();
                 });
 
 
@@ -263,15 +258,9 @@ public class Build : NukeBuild
             _.DependsOn(CreateService)
                 .Executes(() =>
                 {
-
-
-                    _sftpService.Connect(_privateKey);
-
-                    _serviceManager = new ServiceManager(_sftpService);
                     _serviceManager.ReloadSystem();
                     _serviceManager.EnableService(config.ServiceName);
                     _serviceManager.StartService(config.ServiceName);
-
                     _sftpService.Disconnect();
 
                 });

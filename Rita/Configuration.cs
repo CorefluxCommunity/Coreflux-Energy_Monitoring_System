@@ -42,7 +42,6 @@ public class BuildConfig
     public BuildConfig()
     {
 
-        Configuration = NukeBuild.IsLocalBuild ? Configuration.Debug : Configuration.Release;
         ParametersFile = NukeBuild.RootDirectory / ".nuke" / "parameters.json";
         ProjectPathsFile = NukeBuild.RootDirectory / ".nuke" / "projectsPath.json";
         Runtime = new RuntimeConfig().Runtime;
