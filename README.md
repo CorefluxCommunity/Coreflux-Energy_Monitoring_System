@@ -14,6 +14,24 @@ This project is an Energy Consumption Monitoring System that aggregates and repo
 
 - **Detailed Logging:** Logs detailed information about energy consumption for each device, room, office, and the entire company in order to ensure that everything is being sent to the right locations.
 
+## Project WorkFlow
+
+```mermaid
+graph TD
+    Shellys((Shellys)) --> |Publishes to| BrokerPublic((Broker Public));
+    BrokerPublic --> |Bridges to| MQTTBridge[/"MQTT Bridge Asset"\];
+    MQTTBridge --> BrokerDroplet((Broker Droplet));
+    AggregatorService((Aggregator Service Droplet)) <--> |Calculates energy consumption| BrokerDroplet;
+    BrokerDroplet <--> |Receive and send| AutomatismService((Automatism Service Droplet));
+    BrokerDroplet --> MariaDBAsset[/"MariaDB Asset"\];
+    MariaDBAsset --> MariaDBDroplet((MariaDB Droplet));
+    MariaDBDroplet --> Grafana[/Grafana\];
+
+    style BrokerDroplet fill:#f9f,stroke:#333,stroke-width:2px;
+    style MQTTBridge fill:#ccf,stroke:#333,stroke-width:2px;
+    style MariaDBAsset fill:#ccf,stroke:#333,stroke-width:2px;
+``` 
+
 ## Getting Started
 
 ### Prerequisites

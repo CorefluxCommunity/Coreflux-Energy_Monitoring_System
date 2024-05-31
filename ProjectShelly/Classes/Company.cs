@@ -10,4 +10,6 @@ public class Company
 	public string Topic{get; set;} = "";
 	public double TotalEnergy;
     public List<Office> Offices { get; set; } = new List<Office>();
+
+    public long UnixTimestamp;
 }

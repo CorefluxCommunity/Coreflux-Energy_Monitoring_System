@@ -13,6 +13,7 @@ public class Program
 		// Build the host
 		IHost host = builder.Build();
 		
+		Console.WriteLine("Starting Agregator");
 		// Run the host application
 		host.Run();
 	}

@@ -14,4 +14,6 @@ public class Device
 
 	public double LastEnergyVal;
 	public double TotalEnergyConsumed;
+
+	public long UnixTimestamp;
 }
