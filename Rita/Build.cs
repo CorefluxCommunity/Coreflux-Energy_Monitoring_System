@@ -10,6 +10,7 @@ using Cloud.Interfaces;
 using Cloud.Models;
 using Cloud.Services;
 using Microsoft.Build.Framework;
+using Newtonsoft.Json.Linq;
 using Nuke.Common;
 using Nuke.Common.CI;
 using Nuke.Common.CI.GitHubActions;
@@ -36,9 +37,9 @@ using static Nuke.Common.IO.PathConstruction;
     ImportSecrets = [nameof(ENERGY_SECRET)],
     AutoGenerate = false
 )]
-class Build : NukeBuild
+public class Build : NukeBuild
 {
-    public static int Main() => Execute<Build>(x => x.Init, x => x.Execution);
+    public static int Main() => Execute<Build>(x => x.Init, x => x.RunService);
 
     [Solution]
     readonly Solution Solution;
@@ -48,36 +49,38 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
-    readonly string SshUsername = "root";
 
-    readonly string SshHost = "209.38.44.94";
-
-    readonly int SshPort = 22;
-
-    [Parameter] [Secret]
+    [Parameter]
+    [Secret]
     private readonly string ENERGY_SECRET;
 
-
-    readonly string RemoteDirectory = "/root/aggregator/";
-    RuntimeConfig runtimeConfig = new RuntimeConfig();
-
-    Runtime runtime => runtimeConfig.Runtime;
-    readonly AbsolutePathList paths = PathServiceProvider.paths;
-
-    readonly AbsolutePath LocalDirectoryForDeploy = Path.Combine(PathServiceProvider.paths.GetPathForPhase(
-        Phase.Zip), "linux-x64.zip");
-
-        
-
-    private ISftpService _sftpService;
-
+    BuildConfig config;
+    ISftpService _sftpService;
+    IServiceManager _serviceManager;
+    PrivateKeyFile _privateKey;
+    IPrivateKeyProvider _privateKeyProvider;
+    ISftpClientFactory _sftpClientFactory;
 
 
     Target Init => _ => _
-                
+
                 .DependentFor(Clean)
                 .Executes(() =>
                 {
+
+                    config = new BuildConfig();
+
+                    _privateKeyProvider = new PrivateKeyProvider();
+                    _privateKey = _privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
+                    _sftpClientFactory = new SftpClientFactory();
+
+                    _sftpService = new SftpService(_sftpClientFactory, config.SshHost, config.SshUsername);
+                    _serviceManager = new ServiceManager(_sftpService);
+
+
+
+
+
                     DirectoryManager directoryManager = new();
                     AbsolutePathList paths = PathServiceProvider.paths;
 
@@ -130,9 +133,18 @@ class Build : NukeBuild
             _.DependsOn(Restore)
                 .Executes(() =>
                 {
-                    DotNetTasks.DotNetTest(_ =>
-                        _.SetProjectFile(paths.GetPathForPhase(Phase.Test))
-                    );
+
+                    JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
+                    JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
+
+                    List<string> projectsToTest = parameters["ProjectsToTest"].ToObject<List<string>>();
+
+                    foreach (string project in projectsToTest)
+                    {
+                        string projectPath = projectPaths[project].ToString();
+                        DotNetTasks.DotNetTest(_ => _.SetProjectFile(projectPath));
+                    }
+
                 });
 
     Target Compile =>
@@ -142,33 +154,43 @@ class Build : NukeBuild
                 {
                     try
                     {
-                        var projectPath = paths.ProvidePath(runtime, Phase.Build);
-                        var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
+                        // var projectPath = paths.ProvidePath(runtime, Phase.Build);
+                        string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
 
-                        Log.Information($"Compiling the program for {runtime.dotNetIdentifier}...");
+                        JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
+                        JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
 
-                        DotNetTasks.DotNetPublish(s =>
-                            s.SetProject(projectPath)
-                                .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
-                                .AddProperty("PublishSelfContained", true)
-                                .AddProperty("AssemblyName", "ShellyApp")
-                                .SetRuntime(runtime.dotNetIdentifier)
-                                .SetConfiguration("Release")
-                                .EnablePublishSingleFile()
-                                .SetOutput(outputDirectory)
-                        );
+                        List<string> projectsToBuild = parameters["ProjectsToBuildForDroplet"].ToObject<List<string>>();
 
-                        Log.Information(
-                            "Compilation outputs are directed to: {0}",
-                            outputDirectory
-                        );
+                        foreach (string project in projectsToBuild)
+                        {
+                            string projectPath = projectPaths[project].ToString();
+                            string projectName = BuildUtils.GetProjectName(projectPath);
 
-                        IFileDeletionService fileDeletionService = new FileDeletionService();
-                        fileDeletionService.DeleteFiles(outputDirectory, "ShellyApp.pdb", "appsettings.Development.json", "appsettings.json");
+                            Log.Information($"Compiling the program for {config.Runtime.dotNetIdentifier}...");
 
-                        Log.Information("Unecessary files deleted successfully.");
+                            DotNetTasks.DotNetPublish(s =>
+                                s.SetProject(projectPath)
+                                    .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
+                                    .AddProperty("PublishSelfContained", true)
+                                    .AddProperty("AssemblyName", projectName)
+                                    .SetRuntime(config.Runtime.dotNetIdentifier)
+                                    .SetConfiguration("Release")
+                                    .EnablePublishSingleFile()
+                                    .SetOutput(outputDirectory)
+                            );
 
-                    
+                            Log.Information(
+                                "Compilation outputs are directed to: {0}",
+                                outputDirectory
+                            );
+
+                            IFileDeletionService fileDeletionService = new FileDeletionService();
+                            fileDeletionService.DeleteFiles(outputDirectory, $"{projectName}.pdb", "appsettings.Development.json", "appsettings.json");
+
+                            Log.Information("Unnecessary files deleted successfully.");
+
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -182,13 +204,13 @@ class Build : NukeBuild
             _.DependsOn(Compile)
                 .Executes(() =>
                 {
-                    var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
+                    var outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
                     var zipFilePath = Path.ChangeExtension(
-                        paths.ProvidePath(runtime, Phase.Zip),
+                        config.Paths.ProvidePath(config.Runtime, Phase.Zip),
                         ".zip"
                     );
 
-                    Log.Information($"Compressing output for {runtime.dotNetIdentifier}");
+                    Log.Information($"Compressing output for {config.Runtime.dotNetIdentifier}");
 
                     ZipFile.CreateFromDirectory(outputDirectory, zipFilePath);
 
@@ -200,14 +222,7 @@ class Build : NukeBuild
             _.DependsOn(Compress)
                 .Executes(() =>
                 {
-                 
-                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
-                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
-                    
-                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
-                    _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
-
-                    _sftpService.Connect(key);
+                    _sftpService.Connect(_privateKey);
                 });
 
     Target Deploy =>
@@ -215,28 +230,38 @@ class Build : NukeBuild
             _.DependsOn(ConnectSFTP)
                 .Executes(() =>
                 {
-                   _sftpService.UploadFile(LocalDirectoryForDeploy, RemoteDirectory);
+                    _sftpService.UploadFile(config.LocalDirectoryForDeploy, config.RemoteDirectory);
 
                 });
 
     Target Unzip =>
         _ =>
             _.DependsOn(Deploy)
-                .Executes(() => 
-                {   
-                    string remoteZipFilePath = $"{RemoteDirectory}/{Path.GetFileName(LocalDirectoryForDeploy)}";
-                    _sftpService.ExecuteCommand($"unzip -o {remoteZipFilePath} -d {RemoteDirectory}");
+                .Executes(() =>
+                {
+                    string remoteZipFilePath = $"{config.RemoteDirectory}/{Path.GetFileName(config.LocalDirectoryForDeploy)}";
+                    _sftpService.ExecuteCommand($"unzip -o {remoteZipFilePath} -d {config.RemoteDirectory}");
                 });
 
-
-    Target Execution =>
-        _ => 
+    Target CreateService =>
+        _ =>
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    
-                    _sftpService.ExecuteCommand($"./ShellyApp");
+                    _serviceManager.CreateServiceFile(config.ServiceName, config.Content);
 
-                    
+                });
+
+
+    Target RunService =>
+        _ =>
+            _.DependsOn(CreateService)
+                .Executes(() =>
+                {
+                    _serviceManager.ReloadSystem();
+                    _serviceManager.EnableService(config.ServiceName);
+                    _serviceManager.StartService(config.ServiceName);
+                    _sftpService.Disconnect();
+
                 });
 }
