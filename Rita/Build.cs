@@ -71,7 +71,7 @@ public class Build : NukeBuild
                     config = new BuildConfig();
 
                     _privateKeyProvider = new PrivateKeyProvider();
-                    _privateKey = _privateKeyProvider.GetPrivateKey(config.ENERGY_SECRET);
+                    _privateKey = _privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
                     _sftpClientFactory = new SftpClientFactory();
 
                     _sftpService = new SftpService(_sftpClientFactory, config.SshHost, config.SshUsername);
