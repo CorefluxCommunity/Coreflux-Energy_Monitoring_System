@@ -16,7 +16,7 @@ public class Worker : BackgroundService
         LoadConfiguration("../ProjectShelly/config.toml");
         MQTTController.OnConnect += onMqttConnect; //connect to Topic
         MQTTController.NewPayload += onMqttNewPayload; // Receiving new info
-        MQTTController.StartAsync("209.38.44.94", 1883).Wait();
+        MQTTController.StartAsync("iot.coreflux.cloud", 1883).Wait();
     }
 
     private void LoadConfiguration(string filepath)
@@ -55,11 +55,8 @@ public class Worker : BackgroundService
         {
             if (ValidateDeviceDetails(message.topic))
             {
-                Console.WriteLine($"NEW TOPIC RECEIVED: {message.topic}");
-                var msg = JsonConvert.DeserializeObject<DeviceDetails>(message.payload);
-                /* if (msg != null)
-                    ProcessDeviceDetails(msg, message.topic); */
-                Console.WriteLine($"MSG === {msg.Output}");
+                if (IsValidTime() && IsDeviceOn(message))
+                    TurnOffDevice(message.topic);
             }
             else
                 return;
@@ -70,17 +67,47 @@ public class Worker : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Unhandled exception: {ex.Message}");
+            _logger.LogError($"TOPIC: {message.topic}   Unhandled exception: {ex.Message}");
         }
     }
 
-    public bool ValidateDeviceDetails(string topic)
+    private bool ValidateDeviceDetails(string topic)
     {
         var topicSegments = topic.Split('/');
 
-        if (topicSegments.Length == 6 && topicSegments[5] == "switch:0")
+        if (topicSegments.Length == 6 && topicSegments[5] == "switch:0" && topicSegments[4] == "status")
             return true;
         return false;
+    }
+
+    private bool IsValidTime()
+    {
+        var currentTime = DateTime.Now.TimeOfDay;
+        var start = new TimeSpan(20, 30, 0);
+        var end = new TimeSpan(08, 30, 0);
+
+        if (start < end)
+            return currentTime >= start && currentTime <= end;
+        else
+            return currentTime >= start || currentTime <= end;
+    }
+
+    private bool IsDeviceOn(MQTTNewPayload message)
+    {
+        var payload = JsonConvert.DeserializeObject<DeviceDetails>(message.payload);
+        if (payload != null && payload.Output == true)
+            return true;
+        return false;
+    }
+
+    public void TurnOffDevice(string topic)
+    {
+            if(topic.Contains("/status/"))
+            {
+                string actionTopic = topic.Replace("/status/", "/command/");
+                MQTTController.SetDataAsync(actionTopic, "off");
+                _logger.LogInformation($"Sent 'off' command to topic: {actionTopic} at {DateTimeOffset.Now}");
+            }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -90,9 +117,8 @@ public class Worker : BackgroundService
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-                Console.WriteLine($"aquiiiiiiiii: {GeneralInfo.MainTopic}");
             }
-            await Task.Delay(1000, stoppingToken);
+            await Task.Delay(60000, stoppingToken);
         }
     }
 }
