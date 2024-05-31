@@ -37,7 +37,7 @@ using static Nuke.Common.IO.PathConstruction;
     ImportSecrets = [nameof(ENERGY_SECRET)],
     AutoGenerate = false
 )]
-class Build : NukeBuild
+public class Build : NukeBuild
 {
     public static int Main() => Execute<Build>(x => x.Init, x => x.RunService);
 
@@ -49,56 +49,17 @@ class Build : NukeBuild
         ? Configuration.Debug
         : Configuration.Release;
 
-    [Parameter("Path to the parameters file")] readonly AbsolutePath ParametersFile = RootDirectory / ".nuke" / "parameters.json";
-    [Parameter("Path to the project paths file")] readonly AbsolutePath ProjectPathsFile = RootDirectory / ".nuke" / "projectsPath.json";
-
-    readonly string SshUsername = "root";
-
-    readonly string SshHost = "209.38.44.94";
 
     [Parameter]
     [Secret]
     private readonly string ENERGY_SECRET;
 
-    RuntimeConfig runtimeConfig = new RuntimeConfig();
-
-    Runtime runtime => runtimeConfig.Runtime;
-    readonly AbsolutePathList paths = PathServiceProvider.paths;
-
-    readonly AbsolutePath LocalDirectoryForDeploy = Path.Combine(PathServiceProvider.paths.GetPathForPhase(Phase.Zip), "linux-x64.zip");
-
-    readonly string RemoteDirectory = "/root/aggregator/";
-
-
-    string ServiceName => "projectshelly.service";
-
-    private ISftpService _sftpService;
-
-    private IServiceManager _serviceManager;
-
-
-    string Content =
-    $@"
-[Unit]
-Description=Project Shelly Service
-After=network.target
-
-[Service]
-ExecStart=/root/aggregator/ProjectShelly
-Restart=always
-WorkingDirectory=/root/aggregator
-Environment=CONFIG_FILE=/root/aggregator/config.toml
-
-
-[Install]
-WantedBy=multi-user.target
-";
-
-
-    JObject LoadJson(AbsolutePath filePath)
-    {
-        return JObject.Parse(File.ReadAllText(filePath));
-    }
+    BuildConfig config;
+    ISftpService _sftpService;
+    IServiceManager _serviceManager;
+    PrivateKeyFile _privateKey;
+    IPrivateKeyProvider _privateKeyProvider;
+    ISftpClientFactory _sftpClientFactory;
 
 
     Target Init => _ => _
@@ -106,6 +67,20 @@ WantedBy=multi-user.target
                 .DependentFor(Clean)
                 .Executes(() =>
                 {
+
+                    config = new BuildConfig();
+
+                    _privateKeyProvider = new PrivateKeyProvider();
+                    _privateKey = _privateKeyProvider.GetPrivateKey(config.ENERGY_SECRET);
+                    _sftpClientFactory = new SftpClientFactory();
+
+                    _sftpService = new SftpService(_sftpClientFactory, config.SshHost, config.SshUsername);
+                    _serviceManager = new ServiceManager(_sftpService);
+
+
+
+
+
                     DirectoryManager directoryManager = new();
                     AbsolutePathList paths = PathServiceProvider.paths;
 
@@ -158,12 +133,9 @@ WantedBy=multi-user.target
             _.DependsOn(Restore)
                 .Executes(() =>
                 {
-                    // DotNetTasks.DotNetTest(_ =>
-                    //     _.SetProjectFile(paths.GetPathForPhase(Phase.Test))
-                    // );
 
-                    JObject parameters = LoadJson(ParametersFile);
-                    JObject projectPaths = LoadJson(ProjectPathsFile);
+                    JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
+                    JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
 
                     List<string> projectsToTest = parameters["ProjectsToTest"].ToObject<List<string>>();
 
@@ -183,10 +155,10 @@ WantedBy=multi-user.target
                     try
                     {
                         // var projectPath = paths.ProvidePath(runtime, Phase.Build);
-                        string outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
+                        string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
 
-                        JObject parameters = LoadJson(ParametersFile);
-                        JObject projectPaths = LoadJson(ProjectPathsFile);
+                        JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
+                        JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
 
                         List<string> projectsToBuild = parameters["ProjectsToBuildForDroplet"].ToObject<List<string>>();
 
@@ -195,14 +167,14 @@ WantedBy=multi-user.target
                             string projectPath = projectPaths[project].ToString();
                             string projectName = BuildUtils.GetProjectName(projectPath);
 
-                            Log.Information($"Compiling the program for {runtime.dotNetIdentifier}...");
+                            Log.Information($"Compiling the program for {config.Runtime.dotNetIdentifier}...");
 
                             DotNetTasks.DotNetPublish(s =>
                                 s.SetProject(projectPath)
                                     .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
                                     .AddProperty("PublishSelfContained", true)
                                     .AddProperty("AssemblyName", projectName)
-                                    .SetRuntime(runtime.dotNetIdentifier)
+                                    .SetRuntime(config.Runtime.dotNetIdentifier)
                                     .SetConfiguration("Release")
                                     .EnablePublishSingleFile()
                                     .SetOutput(outputDirectory)
@@ -232,13 +204,13 @@ WantedBy=multi-user.target
             _.DependsOn(Compile)
                 .Executes(() =>
                 {
-                    var outputDirectory = paths.ProvidePath(runtime, Phase.Compile);
+                    var outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
                     var zipFilePath = Path.ChangeExtension(
-                        paths.ProvidePath(runtime, Phase.Zip),
+                        config.Paths.ProvidePath(config.Runtime, Phase.Zip),
                         ".zip"
                     );
 
-                    Log.Information($"Compressing output for {runtime.dotNetIdentifier}");
+                    Log.Information($"Compressing output for {config.Runtime.dotNetIdentifier}");
 
                     ZipFile.CreateFromDirectory(outputDirectory, zipFilePath);
 
@@ -251,13 +223,8 @@ WantedBy=multi-user.target
                 .Executes(() =>
                 {
 
-                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
-                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
 
-                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
-                    _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
-
-                    _sftpService.Connect(key);
+                    _sftpService.Connect(_privateKey);
                 });
 
     Target Deploy =>
@@ -265,7 +232,7 @@ WantedBy=multi-user.target
             _.DependsOn(ConnectSFTP)
                 .Executes(() =>
                 {
-                    _sftpService.UploadFile(LocalDirectoryForDeploy, RemoteDirectory);
+                    _sftpService.UploadFile(config.LocalDirectoryForDeploy, config.RemoteDirectory);
 
                 });
 
@@ -274,8 +241,8 @@ WantedBy=multi-user.target
             _.DependsOn(Deploy)
                 .Executes(() =>
                 {
-                    string remoteZipFilePath = $"{RemoteDirectory}/{Path.GetFileName(LocalDirectoryForDeploy)}";
-                    _sftpService.ExecuteCommand($"unzip -o {remoteZipFilePath} -d {RemoteDirectory}");
+                    string remoteZipFilePath = $"{config.RemoteDirectory}/{Path.GetFileName(config.LocalDirectoryForDeploy)}";
+                    _sftpService.ExecuteCommand($"unzip -o {remoteZipFilePath} -d {config.RemoteDirectory}");
                 });
 
     Target CreateService =>
@@ -283,42 +250,11 @@ WantedBy=multi-user.target
             _.DependsOn(Unzip)
                 .Executes(() =>
                 {
-                    // IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
+                    _sftpService.Connect(_privateKey);
 
-
-                    // PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
-                    // using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
-                    // {
-                    //     sshClient.Connect();
-
-                        
-                    //     string deleteCommand = $"if [ -f /etc/systemd/system/{ServiceName} ]; then sudo rm etc/systemd/system/{ServiceName}";
-                    //     using (var deleteCmd = sshClient.CreateCommand(deleteCommand))
-                    //     {
-                    //         var deleteResult = deleteCmd.Execute();
-                    //     }
-
-
-                    //     string command = $"echo '{Content}' | sudo tee /etc/systemd/system/{ServiceName}";
-                    //     using (var createCmd = sshClient.CreateCommand(command))
-                    //     {
-                    //         var result = createCmd.Execute();
-                    //     }
-                    // }
-
-                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
-                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
-                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
-
-                    _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
-                    _sftpService.Connect(key);
-
-
-                    _serviceManager = new ServiceManager(_sftpService);
-                    _serviceManager.CreateServiceFile(ServiceName, Content);
+                    _serviceManager.CreateServiceFile(config.ServiceName, config.Content);
 
                     _sftpService.Disconnect();
-
                 });
 
 
@@ -327,50 +263,16 @@ WantedBy=multi-user.target
             _.DependsOn(CreateService)
                 .Executes(() =>
                 {
-                    // IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
 
 
-                    // PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
-                    // using (SshClient sshClient = new SshClient(SshHost, SshUsername, key))
-                    // {
-                    //     sshClient.Connect();
-                        
-
-                    //     string reloadCommand = "sudo systemctl daemon-reload";
-                    //     using(var reloadCmd = sshClient.CreateCommand(reloadCommand))
-                    //     {
-                    //         var reloadResult = reloadCmd.Execute();
-                    //     }
-
-                    //     string enableCommand = $"sudo systemctl enable {ServiceName}";
-                    //     using(var enableCmd = sshClient.CreateCommand(enableCommand))
-                    //     {
-                    //         var enableResult = enableCmd.Execute();
-                    //     }
-
-                    //     string startCommand = $"sudo systemctl start {ServiceName}";
-                    //     using(var startCmd = sshClient.CreateCommand(startCommand))
-                    //     {
-                    //         var startResult = startCmd.Execute();
-                    //     }
-                    // }
-
-                    IPrivateKeyProvider privateKeyProvider = new PrivateKeyProvider();
-                    PrivateKeyFile key = privateKeyProvider.GetPrivateKey(ENERGY_SECRET);
-                    ISftpClientFactory sftpClientFactory = new SftpClientFactory();
-
-                    _sftpService = new SftpService(sftpClientFactory, SshHost, SshUsername);
-                    _sftpService.Connect(key);
-
-                    _serviceManager = new ServiceManager(_sftpService);
-                    _sftpService.Connect(key);
+                    _sftpService.Connect(_privateKey);
 
                     _serviceManager = new ServiceManager(_sftpService);
                     _serviceManager.ReloadSystem();
-                    _serviceManager.EnableService(ServiceName);
-                    _serviceManager.StartService(ServiceName);
+                    _serviceManager.EnableService(config.ServiceName);
+                    _serviceManager.StartService(config.ServiceName);
 
                     _sftpService.Disconnect();
-                    
+
                 });
 }
