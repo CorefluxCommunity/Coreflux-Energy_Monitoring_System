@@ -154,7 +154,7 @@ public class Build : NukeBuild
                 {
                     try
                     {
-                        // var projectPath = paths.ProvidePath(runtime, Phase.Build);
+
                         string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
 
                         JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
