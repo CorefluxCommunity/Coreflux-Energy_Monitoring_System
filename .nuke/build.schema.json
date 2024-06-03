@@ -66,10 +66,6 @@
             "type": "string"
           }
         },
-        "RemoteDirectory": {
-          "type": "string",
-          "description": "Remote Directory"
-        },
         "Root": {
           "type": "string",
           "description": "Root directory during build execution"
@@ -83,21 +79,20 @@
               "Clean",
               "Compile",
               "Compress",
+              "ConnectSFTP",
+              "CreateService",
               "Deploy",
               "Init",
               "Restore",
+              "RunService",
               "Test",
-              "TestThis"
+              "Unzip"
             ]
           }
         },
         "Solution": {
           "type": "string",
           "description": "Path to a solution file that is automatically loaded"
-        },
-        "SshUsername": {
-          "type": "string",
-          "description": "SSH Username"
         },
         "Target": {
           "type": "array",
@@ -108,11 +103,14 @@
               "Clean",
               "Compile",
               "Compress",
+              "ConnectSFTP",
+              "CreateService",
               "Deploy",
               "Init",
               "Restore",
+              "RunService",
               "Test",
-              "TestThis"
+              "Unzip"
             ]
           }
         },
