@@ -167,7 +167,7 @@ public class Build : NukeBuild
                             string projectPath = projectPaths[project].ToString();
                             string projectName = BuildUtils.GetProjectName(projectPath);
 
-                            Log.Information($"Compiling the program for {config.Runtime.dotNetIdentifier}...");
+                            Log.Information($"Compiling project: {project}. Path: {projectPath}...");
 
                             DotNetTasks.DotNetPublish(s =>
                                 s.SetProject(projectPath)
