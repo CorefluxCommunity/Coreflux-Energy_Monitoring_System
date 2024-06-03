@@ -99,3 +99,10 @@ graph TD;
     H --> I[Wait 10 seconds] --> J[Publish data to the right topic segment] --> K[Wait for a new MQTT Payload] --> A;
    
 ```
+
+# Extra Service (Automation)
+
+This service named AutomatismWorker ensures that all lighting devices connected via Shelly devices are turned off during a specified time period.<br>
+The service continuously monitors the state of these devices and automatically turns off any that are found to be on within the specified timeframe.
+
+When a light is turned on during the monitoring period, the service will automatically publish a message to the topic to turn off the light.<br>For example, if the topic for a device is **Coreflux/Porto/MeetingRoom/Light1/status**, the service will publish an **"off"** command to **Coreflux/Porto/MeetingRoom/Light1/command/switch:0**.
