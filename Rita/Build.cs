@@ -158,7 +158,7 @@ public class Build : NukeBuild
 
                         string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
 
-                        JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
+                        JToken parameters = JsonUtils.LoadJsonToken(config.ParametersFile);
                         JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
 
                         var projectsToBuildArray = parameters["ProjectsToBuildForDroplet"] as JArray;
