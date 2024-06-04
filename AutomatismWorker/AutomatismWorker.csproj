@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-AutomatismWorker-577e4b08-36a7-464c-b7e2-d6ba1fe676fe</UserSecretsId>
-    <AssemblyName>AutomatismWorker</AssemblyName>
+    <PackageId>AutomatismWorker.A</PackageId>
   </PropertyGroup>
 
   <ItemGroup>

@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectShelly.Tests", "Proj
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rita", "Rita\Rita.csproj", "{94DD434F-8E9E-4EF4-9EB2-6DB1318CF90C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutomatismWorker", "AutomatismWorker\AutomatismWorker.csproj", "{69E4266C-B79A-4497-B56F-4A148D23177D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutomatismWorker.A", "AutomatismWorker.A\AutomatismWorker.A.csproj", "{69E4266C-B79A-4497-B56F-4A148D23177D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
