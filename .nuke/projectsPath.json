@@ -1,5 +1,5 @@
 {
     "ProjectShelly.csproj": "ProjectShelly/ProjectShelly.csproj",
     "ProjectShelly.Tests.csproj": "ProjectShelly.Tests/ProjectShelly.Tests.csproj",
-    "AutomatismWorker.csproj": "AutomatismWorker.A/AutomatismWorker.A.csproj"
+    "AutomatismWorker.csproj": "AutomatismWorker/AutomatismWorker.csproj"
 }
