@@ -171,18 +171,18 @@ public class Build : NukeBuild
 
                             DotNetTasks.DotNetPublish(s =>
                                 s.SetProject(projectPath)
-                                    // .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
+                                    .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
                                     .AddProperty("PublishSelfContained", true)
                                     .AddProperty("AssemblyName", projectName)
                                     .SetRuntime(config.Runtime.dotNetIdentifier)
                                     .SetConfiguration("Release")
-                                    // .EnablePublishSingleFile()
-                                    .SetOutput(outputDirectory)
+                                    .EnablePublishSingleFile()
+                                    .SetOutput(Path.Combine(outputDirectory, projectName))
                             );
 
                             Log.Information(
-                                "Compilation outputs are directed to: {0}",
-                                outputDirectory
+                                "Compilation outputs are directed to: {0}, {1}",
+                                outputDirectory, projectName
                             );
 
                             IFileDeletionService fileDeletionService = new FileDeletionService();
