@@ -171,7 +171,7 @@ public class Build : NukeBuild
 
                             DotNetTasks.DotNetPublish(s =>
                                 s.SetProject(projectPath)
-                                    .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
+                                    // .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
                                     .AddProperty("PublishSelfContained", true)
                                     .AddProperty("AssemblyName", projectName)
                                     .SetRuntime(config.Runtime.dotNetIdentifier)
