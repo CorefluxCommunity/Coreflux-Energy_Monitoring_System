@@ -159,12 +159,20 @@ public class Build : NukeBuild
                         JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
                         JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
 
-                        List<string> projectsToBuild = parameters["ProjectsToBuildForDroplet"].ToObject<List<string>>();
+                        // List<string> projectsToBuild = parameters["ProjectsToBuildForDroplet"].ToObject<List<string>>();
 
-                        foreach (string project in projectsToBuild)
+                        List<dynamic> projectsToBuild = parameters["ProjectsToBuildForDroplet"]
+                            .Select(p => new 
+                            {
+                                ProjectName = p["ProjectName"].ToString(),
+                                ProjectPath = p["ProjectPath"].ToString(),
+                                OutputPath = p["OutputPath"].ToString()
+                            }).ToList<dynamic>();
+                        
+                        foreach (dynamic project in projectsToBuild)
                         {
-                            string projectPath = projectPaths[project]?.ToString();
-                            string projectName = BuildUtils.GetProjectName(projectPath);
+                            string projectPath = project.ProjectPath;
+                            string projectName = project.ProjectName;
 
                             string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile, projectName);
 
