@@ -160,8 +160,8 @@ public class Build : NukeBuild
 
                         JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
                         JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
-
-                        List<ProjectToBuild> projectsToBuild = parameters["ProjectsToBuildForDroplet"].ToObject<List<ProjectToBuild>>();
+                        JArray projectsArray = (JArray)parameters["ProjectsToBuildForDroplet"];
+                        List<ProjectToBuild> projectsToBuild = projectsArray.ToObject<List<ProjectToBuild>>();
 
                         foreach (ProjectToBuild project in projectsToBuild)
                         {
