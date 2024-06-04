@@ -163,7 +163,7 @@ public class Build : NukeBuild
 
                         foreach (string project in projectsToBuild)
                         {
-                            string projectPath = projectPaths[project].ToString();
+                            string projectPath = projectPaths[project]?.ToString();
                             string projectName = BuildUtils.GetProjectName(projectPath);
 
                             string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile, projectName);
