@@ -161,15 +161,15 @@ public class Build : NukeBuild
 
                         // List<string> projectsToBuild = parameters["ProjectsToBuildForDroplet"].ToObject<List<string>>();
 
-                        List<dynamic> projectsToBuild = parameters["ProjectsToBuildForDroplet"]
+                            var projectsToBuild = parameters["ProjectsToBuildForDroplet"]
                             .Select(p => new 
                             {
                                 ProjectName = p["ProjectName"].ToString(),
                                 ProjectPath = p["ProjectPath"].ToString(),
                                 OutputPath = p["OutputPath"].ToString()
-                            }).ToList<dynamic>();
+                            }).ToList();
                         
-                        foreach (dynamic project in projectsToBuild)
+                        foreach (var project in projectsToBuild)
                         {
                             string projectPath = project.ProjectPath;
                             string projectName = project.ProjectName;
@@ -223,15 +223,16 @@ public class Build : NukeBuild
                     JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
                     JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
 
-                    List<dynamic> projectsToBuild = parameters["ProjectsToBuildForDroplet"]
+                    var projectsToBuild = parameters["ProjectsToBuildForDroplet"]
                         .Select(p => new
                         {
                             ProjectName = p["ProjectName"].ToString(),
                             ProjectPath = p["ProjectPath"].ToString(),
                             OutputPath = p["OutputPath"].ToString()
-                        }).ToList<dynamic>();
+                        }).ToList();
+                        
 
-                    foreach (dynamic project in projectsToBuild)
+                    foreach (var project in projectsToBuild)
                     {
                         string projectName = project.ProjectName;
                         string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile, projectName);
