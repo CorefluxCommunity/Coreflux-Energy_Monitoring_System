@@ -159,50 +159,43 @@ public class Build : NukeBuild
                         string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
 
                         JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
-                        // JArray projectsArray = (JArray)parameters["ProjectsToBuildForDroplet"];
-                        // List<ProjectToBuild> projectsToBuild = projectsArray.ToObject<List<ProjectToBuild>>();
+                        JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
 
-                        // foreach (ProjectToBuild project in projectsToBuild)
-                        // {
-                        //     string projectPath = project.ProjectPath;
-                        //     string projectName = project.ProjectName;
+                        var projectsToBuildArray = parameters["ProjectsToBuildForDroplet"] as JArray;
 
-                        //     string projectOutputDir = project.OutputPath;
-                        if (parameters.TryGetValue("ProjectsToBuildForDroplet", out JToken projectsToken) && projectsToken is JArray projectsArray)
+                        var projectsToBuild = projectsToBuildArray.ToObject<List<ProjectToBuild>>();
+
+                        foreach (ProjectToBuild project in projectsToBuild)
                         {
-                            List<ProjectToBuild> projectsToBuild = projectsArray.ToObject<List<ProjectToBuild>>();
+                            string projectPath = project.ProjectPath;
+                            string projectName = project.ProjectName;
 
-                            foreach (var project in projectsToBuild)
-                            {
-                                string projectPath = project.ProjectPath;
-                                string projectName = project.ProjectName;
-                                string projectOutputDir = project.OutputPath;
+                            string projectOutputDir = project.OutputPath;
 
-                                Log.Information($"Compiling project: {project}. Path: {projectPath}...");
+                            Log.Information($"Compiling project: {project}. Path: {projectPath}...");
 
-                                DotNetTasks.DotNetPublish(s =>
-                                    s.SetProject(projectPath)
-                                        .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
-                                        .AddProperty("PublishSelfContained", true)
-                                        .AddProperty("AssemblyName", projectName)
-                                        .SetRuntime(config.Runtime.dotNetIdentifier)
-                                        .SetConfiguration("Release")
-                                        .EnablePublishSingleFile()
-                                        .SetOutput(projectOutputDir)
+                            DotNetTasks.DotNetPublish(s =>
+                                s.SetProject(projectPath)
+                                    .AddProperty("IncludeNativeLibrariesForSelfExtract", true)
+                                    .AddProperty("PublishSelfContained", true)
+                                    .AddProperty("AssemblyName", projectName)
+                                    .SetRuntime(config.Runtime.dotNetIdentifier)
+                                    .SetConfiguration("Release")
+                                    .EnablePublishSingleFile()
+                                    .SetOutput(projectOutputDir)
+                                    
+                            );
 
-                                );
+                            Log.Information(
+                                "Compilation outputs are directed to: {0}, {1}",
+                                projectOutputDir, projectName
+                            );
 
-                                Log.Information(
-                                    "Compilation outputs are directed to: {0}, {1}",
-                                    projectOutputDir, projectName
-                                );
+                            IFileDeletionService fileDeletionService = new FileDeletionService();
+                            fileDeletionService.DeleteFiles(projectOutputDir, $"{projectName}.pdb", "appsettings.Development.json", "appsettings.json");
 
-                                IFileDeletionService fileDeletionService = new FileDeletionService();
-                                fileDeletionService.DeleteFiles(projectOutputDir, $"{projectName}.pdb", "appsettings.Development.json", "appsettings.json");
+                            Log.Information("Unnecessary files deleted successfully.");
 
-                                Log.Information("Unnecessary files deleted successfully.");
-
-                            }
                         }
                     }
                     catch (Exception ex)
