@@ -25,13 +25,16 @@ namespace Cloud.Services
             this.Add(Phase.Zip, new ManagedPaths(Path.Combine(RootDirectory, "artifacts", "compressed"), DirectoryBehaviour.GuaranteeDirectoryExists));
             this.Add(Phase.Deploy, new ManagedPaths(Path.Combine(RootDirectory, "artifacts", "deployed"), DirectoryBehaviour.GuaranteeDirectoryExistsAndCleanFiles));
         }
-        public string GetPathForPhase(Phase phase)
+        public string GetPathForPhase(Phase phase, string projectName = "")
         {
+            if (phase == Phase.Compile && !string.IsNullOrEmpty(projectName))
+            {
+                return Path.Combine(this[phase].Path, projectName);
+            }  
             return this[phase].Path;
-
         }
 
-        public string ProvidePath(Runtime runtime, Phase phase)
+        public string ProvidePath(Runtime runtime, Phase phase, string projectName = "")
         {
         
 
@@ -39,7 +42,7 @@ namespace Cloud.Services
         {
             Phase.Init => Path.Combine(this.GetPathForPhase(Phase.Init)),
             Phase.Build => Path.Combine(this.GetPathForPhase(Phase.Build)),
-            Phase.Compile => Path.Combine(this.GetPathForPhase(Phase.Compile), runtime.pathOutput),
+            Phase.Compile => Path.Combine(this.GetPathForPhase(Phase.Compile, projectName), runtime.pathOutput),
             Phase.Test => Path.Combine(this.GetPathForPhase(Phase.Test)),
             Phase.Zip => Path.Combine(this.GetPathForPhase(Phase.Zip), runtime.pathOutput),
             Phase.Deploy => Path.Combine(this.GetPathForPhase(Phase.Deploy), runtime.pathOutput)

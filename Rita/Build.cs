@@ -155,7 +155,6 @@ public class Build : NukeBuild
                     try
                     {
 
-                        string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
 
                         JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
                         JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
@@ -167,7 +166,7 @@ public class Build : NukeBuild
                             string projectPath = projectPaths[project].ToString();
                             string projectName = BuildUtils.GetProjectName(projectPath);
 
-                            string projectOutputDir = Path.Combine(outputDirectory, projectName);
+                            string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile, projectName);
 
                             Log.Information($"Compiling project: {project}. Path: {projectPath}...");
 
@@ -179,17 +178,17 @@ public class Build : NukeBuild
                                     .SetRuntime(config.Runtime.dotNetIdentifier)
                                     .SetConfiguration("Release")
                                     .EnablePublishSingleFile()
-                                    .SetOutput(projectOutputDir)
-                                    
+                                    .SetOutput(outputDirectory)
+
                             );
 
                             Log.Information(
                                 "Compilation outputs are directed to: {0}, {1}",
-                                projectOutputDir, projectName
+                                outputDirectory, projectName
                             );
 
                             IFileDeletionService fileDeletionService = new FileDeletionService();
-                            fileDeletionService.DeleteFiles(projectOutputDir, $"{projectName}.pdb", "appsettings.Development.json", "appsettings.json");
+                            fileDeletionService.DeleteFiles(outputDirectory, $"{projectName}.pdb", "appsettings.Development.json", "appsettings.json");
 
                             Log.Information("Unnecessary files deleted successfully.");
 
@@ -207,17 +206,34 @@ public class Build : NukeBuild
             _.DependsOn(Compile)
                 .Executes(() =>
                 {
-                    var outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
-                    var zipFilePath = Path.ChangeExtension(
-                        config.Paths.ProvidePath(config.Runtime, Phase.Zip),
-                        ".zip"
-                    );
+                    // var outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
+                    // var zipFilePath = Path.ChangeExtension(
+                    //     config.Paths.ProvidePath(config.Runtime, Phase.Zip),
+                    //     ".zip"
+                    // );
+
+                    JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
+                    JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
+
+                    List<string> projectsToBuild = parameters["ProjectsToBuildForDroplet"].ToObject<List<string>>();
+
+                    foreach (string project in projectsToBuild)
+                    {
+                        string projectName = BuildUtils.GetProjectName(projectPaths[project].ToString());
+                        string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile, projectName);
+                        string zipFilePath = Path.Combine(
+                            config.Paths.ProvidePath(config.Runtime, Phase.Zip),
+                            $"{projectName}.zip"
+                        );
+                    
 
                     Log.Information($"Compressing output for {config.Runtime.dotNetIdentifier}");
 
                     ZipFile.CreateFromDirectory(outputDirectory, zipFilePath);
 
                     Log.Information($"Application compressed successfully into {zipFilePath}");
+                
+                    }
                 });
 
     Target ConnectSFTP =>

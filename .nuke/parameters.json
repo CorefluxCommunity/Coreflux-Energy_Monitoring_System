@@ -1,7 +1,10 @@
 {
   "$schema": "./build.schema.json",
   "Solution": "ProjectShelly.sln",
-  "ProjectsToBuildForDroplet": ["ProjectShelly.csproj", "AutomatismWorker.csproj"],
+  "ProjectsToBuildForDroplet": [
+    {"ProjectName": "ProjectShelly", "ProjectPath": "ProjectShelly/ProjectShelly.csproj", "OutputPath": "artifacts/buildout/ProjectShelly"}, 
+    {"ProjectName": "AutomatismWorker", "ProjectPath": "AutomatismWorker/AutomatismWorker.csproj", "OutputPath": "artifacts/buildout/AutomatismWorker"}
+  ],
   "ProjectsToTest": ["ProjectShelly.Tests.csproj"],
   "ServiceContent": "[Unit]\nDescription=Project Shelly Service\nAfter=network.target\n\n[Service]\nExecStart=/root/aggregator/ProjectShelly\nRestart=always\nWorkingDirectory=/root/aggregator\nEnvironment=CONFIG_FILE=/root/aggregator/config.toml\n\n[Install]\nWantedBy=multi-user.target\n"
 }
