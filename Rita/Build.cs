@@ -223,11 +223,17 @@ public class Build : NukeBuild
                     JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
                     JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
 
-                    List<string> projectsToBuild = parameters["ProjectsToBuildForDroplet"].ToObject<List<string>>();
+                    List<dynamic> projectsToBuild = parameters["ProjectsToBuildForDroplet"]
+                        .Select(p => new
+                        {
+                            ProjectName = p["ProjectName"].ToString(),
+                            ProjectPath = p["ProjectPath"].ToString(),
+                            OutputPath = p["OutputPath"].ToString()
+                        }).ToList<dynamic>();
 
-                    foreach (string project in projectsToBuild)
+                    foreach (dynamic project in projectsToBuild)
                     {
-                        string projectName = BuildUtils.GetProjectName(projectPaths[project].ToString());
+                        string projectName = project.ProjectName;
                         string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile, projectName);
                         string zipFilePath = Path.Combine(
                             config.Paths.ProvidePath(config.Runtime, Phase.Zip),
