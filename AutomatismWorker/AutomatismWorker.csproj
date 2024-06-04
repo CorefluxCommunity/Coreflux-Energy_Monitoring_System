@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-AutomatismWorker-577e4b08-36a7-464c-b7e2-d6ba1fe676fe</UserSecretsId>
     <PackageId>AutomatismWorker.A</PackageId>
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
 
   <ItemGroup>
