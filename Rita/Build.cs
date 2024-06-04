@@ -24,6 +24,7 @@ using Nuke.Common.Utilities.Collections;
 using Renci.SshNet;
 using Renci.SshNet.Security;
 using Serilog;
+using Services;
 using static Nuke.Common.EnvironmentInfo;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.IO.PathConstruction;
@@ -155,26 +156,19 @@ public class Build : NukeBuild
                     try
                     {
 
+                        string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
 
                         JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
                         JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
 
-                        // List<string> projectsToBuild = parameters["ProjectsToBuildForDroplet"].ToObject<List<string>>();
+                        List<ProjectToBuild> projectsToBuild = parameters["ProjectsToBuildForDroplet"].ToObject<List<ProjectToBuild>>();
 
-                            var projectsToBuild = parameters["ProjectsToBuildForDroplet"]
-                            .Select(p => new 
-                            {
-                                ProjectName = p["ProjectName"].ToString(),
-                                ProjectPath = p["ProjectPath"].ToString(),
-                                OutputPath = p["OutputPath"].ToString()
-                            }).ToList();
-                        
-                        foreach (var project in projectsToBuild)
+                        foreach (ProjectToBuild project in projectsToBuild)
                         {
                             string projectPath = project.ProjectPath;
                             string projectName = project.ProjectName;
 
-                            string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile, projectName);
+                            string projectOutputDir = project.OutputPath;
 
                             Log.Information($"Compiling project: {project}. Path: {projectPath}...");
 
@@ -186,17 +180,17 @@ public class Build : NukeBuild
                                     .SetRuntime(config.Runtime.dotNetIdentifier)
                                     .SetConfiguration("Release")
                                     .EnablePublishSingleFile()
-                                    .SetOutput(outputDirectory)
-
+                                    .SetOutput(projectOutputDir)
+                                    
                             );
 
                             Log.Information(
                                 "Compilation outputs are directed to: {0}, {1}",
-                                outputDirectory, projectName
+                                projectOutputDir, projectName
                             );
 
                             IFileDeletionService fileDeletionService = new FileDeletionService();
-                            fileDeletionService.DeleteFiles(outputDirectory, $"{projectName}.pdb", "appsettings.Development.json", "appsettings.json");
+                            fileDeletionService.DeleteFiles(projectOutputDir, $"{projectName}.pdb", "appsettings.Development.json", "appsettings.json");
 
                             Log.Information("Unnecessary files deleted successfully.");
 
@@ -214,41 +208,17 @@ public class Build : NukeBuild
             _.DependsOn(Compile)
                 .Executes(() =>
                 {
-                    // var outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
-                    // var zipFilePath = Path.ChangeExtension(
-                    //     config.Paths.ProvidePath(config.Runtime, Phase.Zip),
-                    //     ".zip"
-                    // );
-
-                    JObject parameters = JsonUtils.LoadJson(config.ParametersFile);
-                    JObject projectPaths = JsonUtils.LoadJson(config.ProjectPathsFile);
-
-                    var projectsToBuild = parameters["ProjectsToBuildForDroplet"]
-                        .Select(p => new
-                        {
-                            ProjectName = p["ProjectName"].ToString(),
-                            ProjectPath = p["ProjectPath"].ToString(),
-                            OutputPath = p["OutputPath"].ToString()
-                        }).ToList();
-                        
-
-                    foreach (var project in projectsToBuild)
-                    {
-                        string projectName = project.ProjectName;
-                        string outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile, projectName);
-                        string zipFilePath = Path.Combine(
-                            config.Paths.ProvidePath(config.Runtime, Phase.Zip),
-                            $"{projectName}.zip"
-                        );
-                    
+                    var outputDirectory = config.Paths.ProvidePath(config.Runtime, Phase.Compile);
+                    var zipFilePath = Path.ChangeExtension(
+                        config.Paths.ProvidePath(config.Runtime, Phase.Zip),
+                        ".zip"
+                    );
 
                     Log.Information($"Compressing output for {config.Runtime.dotNetIdentifier}");
 
                     ZipFile.CreateFromDirectory(outputDirectory, zipFilePath);
 
                     Log.Information($"Application compressed successfully into {zipFilePath}");
-                
-                    }
                 });
 
     Target ConnectSFTP =>
