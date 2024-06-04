@@ -167,6 +167,8 @@ public class Build : NukeBuild
                             string projectPath = projectPaths[project].ToString();
                             string projectName = BuildUtils.GetProjectName(projectPath);
 
+                            string projectOutputDir = Path.Combine(outputDirectory, projectName);
+
                             Log.Information($"Compiling project: {project}. Path: {projectPath}...");
 
                             DotNetTasks.DotNetPublish(s =>
@@ -177,16 +179,16 @@ public class Build : NukeBuild
                                     .SetRuntime(config.Runtime.dotNetIdentifier)
                                     .SetConfiguration("Release")
                                     .EnablePublishSingleFile()
-                                    .SetOutput(Path.Combine(outputDirectory, projectName))
+                                    .SetOutput(projectOutputDir)
                             );
 
                             Log.Information(
                                 "Compilation outputs are directed to: {0}, {1}",
-                                outputDirectory, projectName
+                                projectOutputDir, projectName
                             );
 
                             IFileDeletionService fileDeletionService = new FileDeletionService();
-                            fileDeletionService.DeleteFiles(outputDirectory, $"{projectName}.pdb", "appsettings.Development.json", "appsettings.json");
+                            fileDeletionService.DeleteFiles(projectOutputDir, $"{projectName}.pdb", "appsettings.Development.json", "appsettings.json");
 
                             Log.Information("Unnecessary files deleted successfully.");
 
