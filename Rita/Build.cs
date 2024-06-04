@@ -176,7 +176,7 @@ public class Build : NukeBuild
                                     .AddProperty("AssemblyName", projectName)
                                     .SetRuntime(config.Runtime.dotNetIdentifier)
                                     .SetConfiguration("Release")
-                                    .EnablePublishSingleFile()
+                                    // .EnablePublishSingleFile()
                                     .SetOutput(outputDirectory)
                             );
 
