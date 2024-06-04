@@ -167,7 +167,7 @@ public class Build : NukeBuild
                             string projectPath = projectPaths[project].ToString();
                             string projectName = BuildUtils.GetProjectName(projectPath);
 
-                            string projectOutputDir = Path.Combine(outputDirectory, projectName);
+                            string projectOutputDir = Path.Combine(outputDirectory, projectName, "publish");
 
                             Log.Information($"Compiling project: {project}. Path: {projectPath}...");
 
@@ -180,6 +180,7 @@ public class Build : NukeBuild
                                     .SetConfiguration("Release")
                                     .EnablePublishSingleFile()
                                     .SetOutput(projectOutputDir)
+                                    
                             );
 
                             Log.Information(
