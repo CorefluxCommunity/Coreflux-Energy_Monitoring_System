@@ -167,7 +167,7 @@ public class Build : NukeBuild
                             string projectPath = projectPaths[project].ToString();
                             string projectName = BuildUtils.GetProjectName(projectPath);
 
-                            string projectOutputDir = Path.Combine(outputDirectory, projectName, "publish");
+                            string projectOutputDir = Path.Combine(outputDirectory, projectName);
 
                             Log.Information($"Compiling project: {project}. Path: {projectPath}...");
 
